@@ -1,0 +1,10 @@
+{
+  "note": "older synthetic payload shape, still supported by the gate",
+  "session_start": {"event": "SessionStart", "session_id": "fixture_task"},
+  "read": {"event": "PostToolUse", "session_id": "fixture_task", "tool": "read_file",
+           "input": {"path": "pricing.ts"}},
+  "write": {"event": "PreToolUse", "session_id": "fixture_task", "tool": "write_file",
+            "input": {"path": "pricing.ts", "content": "// fixture"}},
+  "write_other_task": {"event": "PreToolUse", "session_id": "other_task",
+                       "tool": "write_file", "input": {"path": "pricing.ts"}}
+}
