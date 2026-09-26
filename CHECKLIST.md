@@ -3,8 +3,9 @@
 Legend: [x] done and verified by a real run · [~] built but not yet exercised end to
 end · [ ] outstanding · (axis) the judging axis it moves · → the artifact that proves it.
 
-Status line: 50 commits on `master`, public at github.com/subheeksh5599/countersign,
-515 tests passing (15 behaviour cases + 500-case matrix), one live refusal recorded.
+Status line: public at github.com/subheeksh5599/countersign, pages published on GitHub
+Pages, 515 tests passing (15 behaviour cases + 500-case matrix), one live refusal and
+one live admission recorded from a real session, two further scenes recorded verbatim.
 
 ## A. Mechanism — done and verified
 - [x] Evidence manifest per task, not one global file (Application) →
