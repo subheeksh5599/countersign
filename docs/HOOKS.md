@@ -46,7 +46,8 @@ Notes that matter in practice:
   its trust flag for the session that should be gated.
 - Only PreToolUse and the prompt-submit event can block. A refusal is exit code 2.
 - The default timeout is 10 seconds and can be overridden per hook. A check costs
-  about 120 ms against a manifest holding 200 observations, measured.
+  308 ms against a manifest holding 200 observations, measured over 20 runs on a
+  two-core laptop — 30x inside the default timeout.
 - A crash in a hook is not a refusal. The gate therefore fails closed on its own
   errors: unreadable payload, wrong payload type, or no resolvable workspace all
   exit 2.

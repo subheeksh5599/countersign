@@ -11,10 +11,12 @@ Satisfied by:
 - Evidence taken from the runtime's own task records: session identity, workspace
   commit, tool payloads (`.countersign/tasks/`, `.countersign/events.jsonl`).
 - The gate itself: 15 end-to-end tests over real git workspaces (`tests/test_gate.py`).
-- Measured cost of a decision: 122 ms with 200 recorded observations, against a
+- Measured cost of a decision: 308 ms with 200 recorded observations, against a
   10 s default hook timeout — so refusal is cheap enough to run on every call.
-Still outstanding: wiring into a licensed install, and confirming the live payload
-field names (that is what `probe` mode exists for).
+- 15 behaviour cases and a 500-case matrix, all passing (`tests/`).
+Wiring into a licensed install is done: machine-wide gate, CLI and global hook block,
+idempotent. Live payload field names were confirmed from a real session (`probe`
+mode); captured copies are in `tests/fixtures/real_payloads.json`.
 
 ## Presentation — target 5
 Needs: a short video with problem, solution, value, market, revenue, roadmap and

@@ -2,7 +2,7 @@
 
 **Live status:** gate implemented and exercised — 15/15 tests passing; the two-task
 and command scenes reproduced on a real repository; the lens page rendered from real
-events; a decision measured at 122 ms against a 10 s default hook timeout. Vendor
+events; a decision measured at 308 ms against a 10 s default hook timeout. Vendor
 hook wiring verified against the vendor's own hook documentation; not yet wired into
 a licensed desktop install.
 
@@ -73,8 +73,8 @@ refuses the action rather than allowing it.
 
 ## Measured cost of a decision
 
-122 ms for a check against a manifest holding 200 observations, including the git
-commit read. The default hook timeout is 10 s and can be overridden. Refusal is
+308 ms for a check against a manifest holding 200 observations, including the git
+commit read (mean of 20 runs, a two-core laptop). The default hook timeout is 10 s and can be overridden. Refusal is
 therefore cheap enough to run on every state-changing call, and it never spends
 tokens — the verdict is a digest comparison, not a model call.
 
