@@ -1,0 +1,73 @@
+{
+  "0000_SessionStart.json": {
+    "cwd": "/tmp/bob_probe_ws",
+    "hook_event_name": "SessionStart",
+    "session_id": "c74bebe8715ebe07de79804a2930ed52",
+    "source": "startup"
+  },
+  "0001_PreToolUse.json": {
+    "cwd": "/tmp/bob_probe_ws",
+    "hook_event_name": "PreToolUse",
+    "session_id": "c74bebe8715ebe07de79804a2930ed52",
+    "tool_input": {
+      "pattern": "**/pricing.ts"
+    },
+    "tool_name": "glob",
+    "tool_use_id": "tooluse_fqgbWcTXGQeQk0vM1en9oU"
+  },
+  "0002_PostToolUse.json": {
+    "cwd": "/tmp/bob_probe_ws",
+    "hook_event_name": "PostToolUse",
+    "session_id": "c74bebe8715ebe07de79804a2930ed52",
+    "tool_input": {
+      "pattern": "**/pricing.ts"
+    },
+    "tool_name": "glob",
+    "tool_response": "pricing.ts",
+    "tool_use_id": "tooluse_fqgbWcTXGQeQk0vM1en9oU"
+  },
+  "0003_PreToolUse.json": {
+    "cwd": "/tmp/bob_probe_ws",
+    "hook_event_name": "PreToolUse",
+    "session_id": "c74bebe8715ebe07de79804a2930ed52",
+    "tool_input": {
+      "path": "/tmp/bob_probe_ws/pricing.ts"
+    },
+    "tool_name": "read_file",
+    "tool_use_id": "tooluse_hI6Y6Xl4JxEQANUK4eFJhU"
+  },
+  "0004_PostToolUse.json": {
+    "cwd": "/tmp/bob_probe_ws",
+    "hook_event_name": "PostToolUse",
+    "session_id": "c74bebe8715ebe07de79804a2930ed52",
+    "tool_input": {
+      "path": "/tmp/bob_probe_ws/pricing.ts"
+    },
+    "tool_name": "read_file",
+    "tool_response": "Contents of file pricing.ts:\n\n1 | export const rate = 1\n2 | ",
+    "tool_use_id": "tooluse_hI6Y6Xl4JxEQANUK4eFJhU"
+  },
+  "0005_PreToolUse.json": {
+    "cwd": "/tmp/bob_probe_ws",
+    "hook_event_name": "PreToolUse",
+    "session_id": "c74bebe8715ebe07de79804a2930ed52",
+    "tool_input": {
+      "diff": "<<<<<<< SEARCH\n:start_line:1\n-------\nexport const rate = 1\n=======\nexport const rate = 7\n>>>>>>> REPLACE",
+      "path": "/tmp/bob_probe_ws/pricing.ts"
+    },
+    "tool_name": "apply_diff",
+    "tool_use_id": "tooluse_e4HYEGta63L87t4jofG8na"
+  },
+  "0006_PostToolUse.json": {
+    "cwd": "/tmp/bob_probe_ws",
+    "hook_event_name": "PostToolUse",
+    "session_id": "c74bebe8715ebe07de79804a2930ed52",
+    "tool_input": {
+      "diff": "<<<<<<< SEARCH\n:start_line:1\n-------\nexport const rate = 1\n=======\nexport const rate = 7\n>>>>>>> REPLACE",
+      "path": "/tmp/bob_probe_ws/pricing.ts"
+    },
+    "tool_name": "apply_diff",
+    "tool_response": "Edited file: pricing.ts\n\nYou do not need to re-read the file, as you have seen all changes.\nProceed with the task using these changes as the new baseline.\n\nIf the user's edits have addressed part of the task or changed the requirements, adjust your approach accordingly.\n\nPatch of edit:\n\n<patch>\n@@ -1,1 +1,1 @@\n-export const rate = 1\n+export const rate = 7\n\n</patch>\n\nMaking multiple related changes in a single apply_diff is more efficient. If other changes are needed in this file, please include them as additional SEARCH/REPLACE blocks.",
+    "tool_use_id": "tooluse_e4HYEGta63L87t4jofG8na"
+  }
+}
