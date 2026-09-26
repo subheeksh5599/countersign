@@ -63,6 +63,8 @@ Bob documents and enforces its hooks.
 
 ## Live links
 
+- Product site and console: https://countersign-eight.vercel.app
+- Console pages: /dashboard, /dashboard/refusals, /dashboard/tasks, /dashboard/events
 - Repository: https://github.com/subheeksh5599/countersign
 - Evidence page from the live session: https://subheeksh5599.github.io/countersign/
 - The comparison page: https://subheeksh5599.github.io/countersign/comparison.html

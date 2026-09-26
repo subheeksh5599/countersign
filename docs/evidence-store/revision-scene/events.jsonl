@@ -1,0 +1,3 @@
+{"at": "2026-09-26T16:14:03Z", "commit": "6d950527c8cef5968c031052836ee06f71a344a0", "event": "manifest_opened", "task": "task_revision"}
+{"at": "2026-09-26T16:14:03Z", "digest": "baa5252515ea549a0fd0dc9f412e0a689f5a7d342c4bc91b90c2d6ee834184e0", "event": "evidence_recorded", "path": "pricing.ts", "task": "task_revision", "via": "direct"}
+{"at": "2026-09-26T16:14:04Z", "codes": ["REVISION_MOVED"], "event": "verdict", "path": "pricing.ts", "receipt": "361718adb60a2673ea13a90e305f52e4e52e6a5f1747dc488d040ad2f82db99a", "task": "task_revision", "verdict": "REFUSED"}

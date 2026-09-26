@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ember: #ff4d00;
+  /* text-safe variant of the accent: 5.14:1 on white, 4.88:1 on vellum */
+  --color-ember-text: #c93a00;
+  --color-ember-glow: #fcddcc;
+  --color-ember-deep: #febec2;
+  --color-gridline: #e5e7eb;
+  --color-ink: #262626;
+  --color-vellum: #f9f9f9;
+  --color-slate: #727272;
+  --color-graphite: #616161;
+  --color-ash: #949494;
+  --color-stone: #c7c7c7;
+  --color-mist: #b5b5b5;
+
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-caption: 10px;
+  --text-caption--line-height: 1.5;
+  --text-caption--letter-spacing: 0.2px;
+  --text-body: 14px;
+  --text-body--line-height: 1.5;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 1.6;
+  --text-heading-sm: 20px;
+  --text-heading-sm--line-height: 1.33;
+  --text-heading: 24px;
+  --text-heading--line-height: 1.2;
+  --text-heading-lg: 40px;
+  --text-heading-lg--line-height: 1.1;
+  --text-heading-lg--letter-spacing: -0.2px;
+  --text-display: 52px;
+  --text-display--line-height: 1.07;
+  --text-display--letter-spacing: -0.26px;
+  --text-display-xl: 60px;
+  --text-display-xl--line-height: 1;
+  --text-display-xl--letter-spacing: -0.6px;
+
+  --radius-card: 16px;
+  --radius-window: 8px;
+  --radius-pill: 999px;
+
+  --shadow-ring: rgb(249, 249, 249) 0px 0px 0px 6px;
+  --shadow-lift: rgba(0, 0, 0, 0.03) 0px 24px 32px -12px, rgba(0, 0, 0, 0.03) 0px 16px 24px -8px,
+    rgba(0, 0, 0, 0.03) 0px 8px 16px -4px, rgba(0, 0, 0, 0.03) 0px 0px 0px 1px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #ffffff;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-ember-glow);
+}
+
+.shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.grid-paper {
+  background-image: linear-gradient(to right, var(--color-gridline) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-gridline) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.dot-field {
+  background-image: radial-gradient(var(--color-gridline) 1.1px, transparent 1.1px);
+  background-size: 16px 16px;
+  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 45%, #000 20%, transparent 78%);
+  mask-image: radial-gradient(ellipse 60% 70% at 50% 45%, #000 20%, transparent 78%);
+}
+
+.hairline {
+  border: 1px solid var(--color-gridline);
+}
+
+.card {
+  background: var(--color-vellum);
+  border: 1px solid var(--color-gridline);
+  border-radius: var(--radius-card);
+  transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1),
+    box-shadow 0.35s cubic-bezier(0.22, 0.61, 0.36, 1), border-color 0.35s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: #d8dbe0;
+  box-shadow: var(--shadow-lift);
+}
+
+.pill {
+  border-radius: var(--radius-pill);
+}
+
+.cta {
+  background: var(--color-ember);
+  color: #ffffff;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 0 0 6px var(--color-ember-glow);
+  transition: transform 0.25s cubic-bezier(0.22, 0.61, 0.36, 1), background 0.25s ease;
+}
+
+.cta:hover {
+  background: #e64500;
+  transform: translateY(-1px);
+}
+
+.ghost {
+  border-radius: var(--radius-pill);
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.ghost:hover {
+  background: var(--color-vellum);
+}
+
+/* Content is always visible: the entrance is transform-only, so a screenshot,
+   a print, or a reader with scripting disabled never sees a blank section. */
+.reveal {
+  transform: translateY(12px);
+  transition: transform 0.75s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.reveal.in {
+  transform: none;
+}
+
+.signal {
+  animation: signal 2.6s ease-in-out infinite;
+}
+
+@keyframes signal {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.tick {
+  animation: tick 3.2s linear infinite;
+}
+
+@keyframes tick {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { transform: none; transition: none; }
+  .signal, .tick { animation: none; }
+  .card:hover, .cta:hover { transform: none; }
+}

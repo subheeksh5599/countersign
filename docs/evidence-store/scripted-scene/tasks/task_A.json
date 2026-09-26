@@ -1,0 +1,17 @@
+{
+  "commands": {},
+  "commit": "caae6a966056e0d9c9a73538894533f4329d4bd2",
+  "contradictions": [],
+  "files": {
+    "src/sarif.ts": {
+      "at": "2026-09-26T16:12:55Z",
+      "digest": "d159f8782f008f0bbb9eac2b9014210c0835409c5f0861997a552fe5b5909e50",
+      "revision": "60d2140315679e9e3118a9351fa83ee931bbdfcb",
+      "task": "task_A",
+      "via": "direct"
+    }
+  },
+  "implicit": false,
+  "opened_at": "2026-09-26T16:12:55Z",
+  "task": "task_A"
+}

@@ -1,0 +1,17 @@
+{
+  "commands": {},
+  "commit": "6d950527c8cef5968c031052836ee06f71a344a0",
+  "contradictions": [],
+  "files": {
+    "pricing.ts": {
+      "at": "2026-09-26T16:14:03Z",
+      "digest": "baa5252515ea549a0fd0dc9f412e0a689f5a7d342c4bc91b90c2d6ee834184e0",
+      "revision": "a512df3add44f08cf268f62adbfc26fb695c16ed",
+      "task": "task_revision",
+      "via": "direct"
+    }
+  },
+  "implicit": false,
+  "opened_at": "2026-09-26T16:14:03Z",
+  "task": "task_revision"
+}

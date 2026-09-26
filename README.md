@@ -80,6 +80,13 @@ tokens — the verdict is a digest comparison, not a model call.
 
 ## Serving the produced evidence
 
+The product site and console are a Next.js app in `landing/`, deployed at
+https://countersign-eight.vercel.app. The console reads the recorded evidence stores
+committed under `docs/evidence-store/` (four scenes: a live session, the scripted
+two-task scene, the revision-moved scene, and a 200-observation scale check) and shows
+verdicts, refusal codes, per-task manifests and the raw event log. Regenerate its data
+with `npm run sync-store` inside `landing/`.
+
 `docs/index.html` is a lens page generated from a live session's evidence store
 (committed at `docs/evidence-store/`); `docs/scripted.html` is the same page for the
 two-task scene and `docs/comparison.html` is the one-screen field comparison. All three

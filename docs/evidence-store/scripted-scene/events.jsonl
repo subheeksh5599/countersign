@@ -1,0 +1,9 @@
+{"at": "2026-09-26T16:12:55Z", "commit": "caae6a966056e0d9c9a73538894533f4329d4bd2", "event": "manifest_opened", "task": "task_A"}
+{"at": "2026-09-26T16:12:55Z", "digest": "d159f8782f008f0bbb9eac2b9014210c0835409c5f0861997a552fe5b5909e50", "event": "evidence_recorded", "path": "src/sarif.ts", "task": "task_A", "via": "direct"}
+{"at": "2026-09-26T16:12:55Z", "commit": "caae6a966056e0d9c9a73538894533f4329d4bd2", "event": "manifest_opened", "task": "task_B"}
+{"at": "2026-09-26T16:12:56Z", "digest": "4fcd77cad7f2f0f881ddbad1149f6a054771e52ceda45e4032860aed05818573", "event": "evidence_recorded", "path": "src/report.ts", "task": "task_B", "via": "direct"}
+{"at": "2026-09-26T16:12:56Z", "codes": ["EVIDENCE_SUPERSEDED"], "event": "verdict", "path": "src/sarif.ts", "receipt": "a231c8808c828e9f7b21888e5ed2359568842d3023b07832eaef1cef656281b4", "task": "task_A", "verdict": "REFUSED"}
+{"at": "2026-09-26T16:12:56Z", "codes": ["CROSS_TASK_EVIDENCE"], "event": "verdict", "path": "src/report.ts", "receipt": "8aaef885a79906f6054195ce6f3f212d0091a81c60c7fa3ed7abab9d579f25c1", "task": "task_A", "verdict": "REFUSED"}
+{"at": "2026-09-26T16:12:56Z", "commit": "caae6a966056e0d9c9a73538894533f4329d4bd2", "event": "manifest_opened", "task": "task_A2"}
+{"at": "2026-09-26T16:12:56Z", "digest": "bf97e736dc19923a901a466253f8683eed74d9e760d5bc1c53710106ce8039b0", "event": "evidence_recorded", "path": "src/sarif.ts", "task": "task_A2", "via": "direct"}
+{"at": "2026-09-26T16:12:56Z", "event": "verdict", "evidence_digest": "bf97e736dc19923a901a466253f8683eed74d9e760d5bc1c53710106ce8039b0", "path": "src/sarif.ts", "receipt": "789a7ae6e8a60a8f6e615155dd3250e61a0a03b0e2a8929f2e8a8be1fbad1701", "task": "task_A2", "verdict": "ADMITTED"}
