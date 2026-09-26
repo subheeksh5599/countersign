@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command",
+                     "command": "python3 COUNTERSIGN_GATE session-start", "timeout": 10 } ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "^(read_file|execute_command)$",
+        "hooks": [ { "type": "command",
+                     "command": "python3 COUNTERSIGN_GATE record", "timeout": 10 } ] }
+    ],
+    "PreToolUse": [
+      { "matcher": ".*(write|edit|patch|replace|apply|delete|move|command).*",
+        "hooks": [ { "type": "command",
+                     "command": "python3 COUNTERSIGN_GATE check", "timeout": 10 } ] }
+    ]
+  }
+}
