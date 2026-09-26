@@ -70,23 +70,31 @@ Status line: 50 commits on `master`, public at github.com/subheeksh5599/counters
       search block still matched. Observed behaviour, recorded in `docs/LIMITS.md`
 
 ## D. Submission surface
-- [x] Repository published — public, 50 real commits, live-status block at the top
-- [ ] Record the five-minute video using `VIDEO.md`
-- [ ] Serve `site/index.html` from a URL and link it in the submission
-- [ ] One-screen comparison in the submission: what the field audits (judgement)
-      versus what this audits (identity)
-- [ ] Business paragraph in the submission itself, not only in the repo
-- [ ] Publish the not-proven list in the submission, in the same breath as the win
+- [x] Repository published — public, real commits, live-status block at the top
+- [x] Evidence page published from `docs/` on GitHub Pages, linked from
+      `SUBMISSION.md`; raw record committed under `docs/evidence-store/`
+- [x] One-screen comparison built → `docs/comparison.html` (field audits judgement,
+      this audits identity), plus the paragraph in `SUBMISSION.md`
+- [x] Business paragraph written for the form itself, including the honesty line about
+      IBM selling Bobcoins → `SUBMISSION.md` market section
+- [x] Not-proven list written for the form itself, in the same breath as the win →
+      `SUBMISSION.md`, mirrored in `docs/LIMITS.md`
+- [x] Paste-ready submission text for every form field → `SUBMISSION.md`
+- [ ] Record the five-minute video using `VIDEO.md` (the user records this)
 
 ## E. Optional
 - [x] Second refusal scene: a destructive command refused while a recorded result is
       contradicted → `demo2.sh`
 - [x] Provenance visible per observation in the lens ("who observed what")
 - [x] Export mode producing a hashed record per task
-- [~] Multi-developer demo written (`examples/multi_developer/README.md`), not yet run
-      against two clones
-- [~] Third scene (workspace revision moving mid-task) implemented and covered by the
-      matrix (`REVISION_MOVED`), not yet filmed
+- [x] Multi-developer demo run for real: two clones, a bare remote, one refusal
+      before the fetch and one after → `scripts/demo_multi_developer.sh`,
+      verbatim in `docs/MULTI_DEV_RUN.md`
+- [x] Third scene run for real: byte-identical file, moved revision, refused
+      `REVISION_MOVED` → `scripts/scene_revision_moved.sh`, verbatim in
+      `docs/SCENE_REVISION_MOVED.md`
+- [x] Evidence store from the live session committed for verification →
+      `docs/evidence-store/`
 
 ## F. Where the marks come from
 - Application: refusal produced by the runtime's own hook on a real session, from its
