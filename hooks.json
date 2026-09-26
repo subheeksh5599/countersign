@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command",
+                     "command": "python3 .countersign/countersign.py session-start",
+                     "timeout": 10 } ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "^(read_file|execute_command)$",
+        "hooks": [ { "type": "command",
+                     "command": "python3 .countersign/countersign.py record",
+                     "timeout": 10 } ] }
+    ],
+    "PreToolUse": [
+      { "matcher": ".*(write|edit|patch|replace|apply|delete|move|command).*",
+        "hooks": [ { "type": "command",
+                     "command": "python3 .countersign/countersign.py check",
+                     "timeout": 10 } ] }
+    ]
+  }
+}
