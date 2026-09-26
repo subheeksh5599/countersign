@@ -1,0 +1,12 @@
+# Roadmap
+
+1. Ship the hook block as an organisation-wide default, so every workspace refuses
+   stale-evidence edits without per-project setup.
+2. Separate manifests per subtask once the payload identifies subtasks, and refuse
+   parent writes that lean on a subtask's unrefreshed observation.
+3. Command contradictions scoped to the state the command reads, instead of the whole
+   task, to cut false positives from outputs that change for benign reasons.
+4. Evidence records as a signed, exportable artifact for outside review.
+5. Extend the same fall-closed pattern to every state-changing surface the runtime
+   exposes, including files outside the workspace when a task is explicitly granted
+   them.
