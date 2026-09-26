@@ -272,7 +272,7 @@ def main():
     if mode == "export":
         return export(sid)
 
-    if mode != "check":
+    if mode != "check":  # unknown modes must fail closed, never raise
         sys.stderr.write(f"unknown mode: {mode!r}\n")
         return 2
 
