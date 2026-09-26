@@ -80,8 +80,11 @@ tokens — the verdict is a digest comparison, not a model call.
 
 ## Serving the produced evidence
 
-`site/index.html` is a lens page generated from a real run. Regenerate it with
-`python3 lens.py <workspace> -o site/index.html` and serve it from any static host;
+`docs/index.html` is a lens page generated from a live session's evidence store
+(committed at `docs/evidence-store/`); `docs/scripted.html` is the same page for the
+two-task scene and `docs/comparison.html` is the one-screen field comparison. All three
+are published on GitHub Pages. Regenerate with
+`python3 lens.py <workspace> -o docs/index.html` and copy across, or serve locally;
 there is no server code and no build step.
 
 ## Wiring

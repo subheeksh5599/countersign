@@ -1,0 +1,47 @@
+<!doctype html><meta charset="utf-8"><title>Countersign - what the field audits vs what this audits</title>
+<style>
+ body{background:#0d0f12;color:#e6e8eb;font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;margin:0;padding:32px}
+ h1{font-size:18px;margin:0 0 18px} h2{font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:#8b93a1;margin:0 0 10px}
+ .cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:1100px}
+ .col{border:1px solid #1c2127;border-radius:6px;padding:14px 16px;background:#111419}
+ .col.this{border-color:#2c4a3a;background:#0f1714}
+ .q{color:#e2b341;font-size:15px;margin:0 0 10px}
+ ul{margin:0;padding-left:18px} li{margin:3px 0}
+ .verdict{margin-top:12px;padding-top:10px;border-top:1px solid #1c2127;color:#9fb0c4}
+ .this .verdict{color:#8fd6ab}
+ .foot{max-width:1100px;margin-top:24px;border-left:3px solid #d64545;background:#1a1113;padding:10px 14px}
+ .mono{color:#9fb0c4} .k{color:#e2b341}
+</style>
+<h1>Countersign &mdash; what the field audits, and what this audits</h1>
+<div class="cols">
+ <div class="col">
+  <h2>The field</h2>
+  <p class="q">Did the agent make a mistake?</p>
+  <ul>
+   <li>read the diff, read the transcript</li>
+   <li>ask a model whether the change looks wrong</li>
+   <li>run the test suite afterwards</li>
+   <li>have a reviewer judge the result</li>
+  </ul>
+  <div class="verdict">An opinion. It arrives after the action, it cannot produce a copy of
+  what the task actually read, and a plausible-looking change passes it.</div>
+ </div>
+ <div class="col this">
+  <h2>Countersign</h2>
+  <p class="q">Is this evidence still evidence for this repository?</p>
+  <ul>
+   <li>the digest the task recorded when it read the file</li>
+   <li>the digest on disk at the moment of the action</li>
+   <li>the committed revision for that path</li>
+   <li>the command results the task is relying on</li>
+  </ul>
+  <div class="verdict">Arithmetic. Evaluated at the boundary before the action, refuses with
+  exit code 2, and writes a receipt naming both digests.</div>
+ </div>
+</div>
+<div class="foot">
+ From the live session: the task held <span class="k">75309f9e6112</span>, the file on disk was
+ <span class="k">c56e4af78a4a</span>, the edit was refused as <span class="k">EVIDENCE_SUPERSEDED</span>,
+ receipt <span class="mono">a0116af8b77c77062d88bccc068a3faf8de49531e6bf27c18eabacfbb9db1f1c</span>,
+ and the file was not modified.
+</div>
