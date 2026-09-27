@@ -6,11 +6,10 @@ const REPO = "https://github.com/subheeksh5599/countersign";
 const EVIDENCE = "https://subheeksh5599.github.io/countersign/";
 const COMPARISON = "https://subheeksh5599.github.io/countersign/comparison.html";
 
-const REFUSAL_DIGESTS = "75309f9e6112 → c56e4af78a4a";
 const SCENE = [
-  { step: "Task A reads pricing.ts", detail: "evidence 75309f9e6112", state: "recorded" },
-  { step: "A second task writes the file", detail: "digest now c56e4af78a4a", state: "drift" },
-  { step: "Task A proposes its edit", detail: "exit 2, receipt a0116af8", state: "refused" },
+  { step: "The task reads pricing.ts", detail: "its evidence is recorded", state: "recorded" },
+  { step: "A second task writes the file", detail: "the file no longer matches", state: "drift" },
+  { step: "The task proposes its edit", detail: "refused, exit code 2", state: "refused" },
 ];
 
 const CARDS = [
@@ -68,20 +67,6 @@ export default function Page() {
 
   return (
     <>
-      <div className="bg-ember text-white">
-        <div className="shell flex h-10 items-center justify-center gap-2 text-center">
-          <span className="text-caption uppercase" style={{ letterSpacing: "0.14em" }}>
-            Every verdict carries a receipt
-          </span>
-          <span aria-hidden className="text-caption opacity-60">
-            ·
-          </span>
-          <a href={EVIDENCE} className="text-caption underline underline-offset-4 opacity-90 hover:opacity-100">
-            see the evidence page
-          </a>
-        </div>
-      </div>
-
       <header className="sticky top-0 z-40 border-b border-gridline bg-white/95 backdrop-blur">
         <div className="shell flex h-16 items-center justify-between">
           <a href="#top" className="text-[15px] font-medium tracking-tight">
@@ -112,34 +97,24 @@ export default function Page() {
       <main id="top">
         <section className="relative overflow-hidden border-b border-gridline">
           <div className="dot-field pointer-events-none absolute inset-0 opacity-70" aria-hidden />
-          <div className="shell relative py-20 text-center md:py-28">
-            <span
-              className="reveal in inline-flex items-center gap-2 rounded-full border border-gridline bg-white px-3 py-1.5 text-caption uppercase text-graphite"
-              style={{ letterSpacing: "0.12em" }}
-            >
-              <span className="signal inline-block h-1.5 w-1.5 rounded-full bg-ember" />
-              Pre-action enforcement
-            </span>
-            <h1 className="reveal in mx-auto mt-7 max-w-4xl text-[40px] font-medium leading-[1.07] tracking-[-0.26px] md:text-display-xl md:leading-[1] md:tracking-[-0.6px]">
+          <div className="shell relative py-24 text-center md:py-36">
+            <h1 className="reveal in mx-auto max-w-4xl max-w-4xl text-[40px] font-medium leading-[1.07] tracking-[-0.26px] md:text-display-xl md:leading-[1] md:tracking-[-0.6px]">
               Refuse the edit when the <span className="text-ember">evidence has moved</span>
             </h1>
-            <p className="reveal in mx-auto mt-6 max-w-2xl text-body-lg text-graphite">
+            <p className="reveal in mx-auto mt-7 max-w-2xl text-body-lg text-graphite">
               Countersign compares the evidence a task is holding with the repository before every
               state-changing call. If the file, the command results or the committed revision have
               moved, the call does not run.
             </p>
 
-            <div className="reveal in mx-auto mt-10 max-w-3xl">
+            <div className="reveal in mx-auto mt-12 max-w-3xl">
               <div className="flex items-center gap-3 rounded-full border border-gridline bg-white py-2 pl-5 pr-2 shadow-[var(--shadow-ring)]">
-                <div className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left md:flex-row md:items-center md:gap-4">
+                <div className="flex min-w-0 flex-1 items-center gap-3 text-left">
                   <span className="font-mono text-[13px] font-medium text-ink">EVIDENCE_SUPERSEDED</span>
-                  <span className="truncate font-mono text-[13px] text-slate">{REFUSAL_DIGESTS}</span>
+                  <span className="truncate text-body text-slate">the evidence moved, the edit did not run</span>
                 </div>
                 <span className="hidden rounded-full bg-vellum px-2.5 py-1 font-mono text-[12px] text-ink lg:inline">
                   exit 2
-                </span>
-                <span className="hidden rounded-full bg-vellum px-2.5 py-1 font-mono text-[12px] text-ink lg:inline">
-                  receipt a0116af8
                 </span>
                 <a
                   href={EVIDENCE}
@@ -154,7 +129,7 @@ export default function Page() {
               </div>
             </div>
 
-            <div className="reveal in mt-8 flex items-center justify-center gap-3 text-body">
+            <div className="reveal in mt-12 flex items-center justify-center gap-3 text-body">
               <a href={REPO} className="cta px-5 py-2.5 font-medium">
                 Read the source
               </a>
@@ -172,7 +147,7 @@ export default function Page() {
         </section>
 
         <section id="boundary" className="border-b border-gridline">
-          <div className="shell py-20 md:py-24">
+          <div className="shell py-28 md:py-36">
             <div data-reveal className="reveal max-w-2xl">
               <span className="flex items-center gap-2 font-mono text-[12px] uppercase text-slate" style={{ letterSpacing: "0.12em" }}>
                 <span className="inline-block h-1 w-1 rounded-full bg-ember" />
@@ -182,7 +157,7 @@ export default function Page() {
                 Three guarantees, all enforced before the call runs
               </h2>
             </div>
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <div className="mt-16 grid gap-8 md:grid-cols-3">
               {CARDS.map((c, i) => (
                 <article
                   key={c.title}
@@ -204,7 +179,7 @@ export default function Page() {
         </section>
 
         <section id="difference" className="border-b border-gridline bg-vellum">
-          <div className="shell py-20 md:py-24">
+          <div className="shell py-28 md:py-36">
             <div data-reveal className="reveal mx-auto max-w-2xl text-center">
               <span className="flex items-center justify-center gap-2 font-mono text-[12px] uppercase text-slate" style={{ letterSpacing: "0.12em" }}>
                 <span className="inline-block h-1 w-1 rounded-full bg-ember" />
@@ -214,7 +189,7 @@ export default function Page() {
                 Before the action, not after the review
               </h2>
             </div>
-            <div className="mx-auto mt-12 grid max-w-4xl gap-6 md:grid-cols-2">
+            <div className="mx-auto mt-16 grid max-w-4xl gap-8 md:grid-cols-2">
               <div data-reveal className="reveal card bg-white p-8">
                 <p className="font-mono text-[12px] uppercase text-slate" style={{ letterSpacing: "0.12em" }}>
                   The field
@@ -250,7 +225,7 @@ export default function Page() {
         </section>
 
         <section id="scene" className="border-b border-gridline">
-          <div className="shell py-20 md:py-24">
+          <div className="shell py-28 md:py-36">
             <div data-reveal className="reveal max-w-2xl">
               <span className="flex items-center gap-2 font-mono text-[12px] uppercase text-slate" style={{ letterSpacing: "0.12em" }}>
                 <span className="inline-block h-1 w-1 rounded-full bg-ember" />
@@ -263,7 +238,7 @@ export default function Page() {
                 The failure this gate exists for, taken from a recorded session.
               </p>
             </div>
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <div className="mt-16 grid gap-8 md:grid-cols-3">
               {SCENE.map((s, i) => (
                 <div
                   key={s.step}
@@ -297,7 +272,7 @@ export default function Page() {
         </section>
 
         <section className="border-b border-gridline bg-vellum">
-          <div className="shell grid gap-6 py-16 md:grid-cols-3">
+          <div className="shell grid gap-8 py-24 md:grid-cols-3">
             {[
               ["8", "refusal codes, each named"],
               ["308 ms", "per decision, measured over 20 runs"],
@@ -312,7 +287,7 @@ export default function Page() {
         </section>
 
         <section className="border-b border-gridline">
-          <div className="shell py-20 text-center md:py-24">
+          <div className="shell py-28 text-center md:py-36">
             <h2 data-reveal className="reveal mx-auto max-w-3xl text-heading-lg font-medium tracking-[-0.2px] md:text-display md:leading-[1.07]">
               Give every task the same boundary
             </h2>
@@ -332,7 +307,7 @@ export default function Page() {
       </main>
 
       <footer className="bg-white">
-        <div className="shell flex flex-col items-center justify-between gap-4 py-8 text-body text-slate md:flex-row">
+        <div className="shell flex flex-col items-center justify-between gap-6 py-12 text-body text-slate md:flex-row">
           <span className="font-medium text-ink">Countersign</span>
           <div className="flex items-center gap-6">
             <a href={REPO} className="hover:text-ink">

@@ -68,7 +68,9 @@ body {
 .shell {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 24px;
+  /* inline padding only: an unlayered `padding` shorthand would beat Tailwind's
+     py-* utilities (utilities live in a cascade layer and lose to plain rules) */
+  padding-inline: 24px;
 }
 
 .grid-paper {
