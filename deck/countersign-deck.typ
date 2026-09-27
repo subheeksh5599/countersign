@@ -82,7 +82,8 @@
     #v(0.9cm)
     #block(width: 24cm)[#text(size: 13pt, fill: muted)[
       It refuses the edit when the evidence the task is holding no longer describes the
-      repository. The verdict is a hash comparison, and every verdict leaves a receipt.
+      repository. The verdict is a hash comparison, the refusal prints both digests so it can be
+      checked rather than believed, and a forged receipt fails the replay.
     ]],
   ],
   [#text(size: 11pt, fill: muted)[Built for the IBM Bob 2.0 runtime]]
@@ -347,6 +348,7 @@
     row-gutter: 0.42cm,
     column-gutter: 1cm,
     [*Repository*], [public, and linked in the submission form],
+    [*Verify the record*], [countersign-eight.vercel.app/record],
     [*Demo video*], [youtu.be/NQ43DN8eA8I],
     [*Product site*], [countersign-eight.vercel.app],
   )

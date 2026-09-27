@@ -77,6 +77,7 @@ export default function Page() {
               ["Boundary", "#boundary"],
               ["Difference", "#difference"],
               ["Scene", "#scene"],
+              ["Verify the record", "/record"],
             ].map(([label, href]) => (
               <a key={label} href={href} className="text-body text-graphite transition-colors hover:text-ink">
                 {label}
@@ -87,8 +88,8 @@ export default function Page() {
             <a href="/console" className="ghost hidden px-3 py-2 text-body font-medium sm:block">
               Console
             </a>
-            <a href={EVIDENCE} className="cta px-4 py-2 text-body font-medium">
-              Evidence
+            <a href="/record" className="cta px-4 py-2 text-body font-medium">
+              Verify the record
             </a>
           </div>
         </div>
@@ -110,6 +111,15 @@ export default function Page() {
             <div className="reveal in mt-14 flex items-center justify-center gap-3 text-body">
               <a href={REPO} className="cta px-5 py-2.5 font-medium">
                 Read the source
+              </a>
+              <a
+                href="/record"
+                className="hairline ghost flex items-center gap-1.5 px-4 py-2.5 font-medium text-graphite"
+              >
+                Verify the record
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 12h13M13 6l6 6-6 6" />
+                </svg>
               </a>
               <a
                 href="/console"
@@ -290,6 +300,9 @@ export default function Page() {
           <div className="flex items-center gap-6">
             <a href={REPO} className="hover:text-ink">
               Source
+            </a>
+            <a href="/record" className="hover:text-ink">
+              Verify the record
             </a>
             <a href={EVIDENCE} className="hover:text-ink">
               Evidence

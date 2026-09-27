@@ -1,0 +1,5 @@
+{
+ "note": "the chain head the CLI prints for this store",
+ "receipts": 4,
+ "chain_head": "e83186b797d1a73266b3db2ac156926940ba66ae52d920a341daa339eaa81b2d"
+}

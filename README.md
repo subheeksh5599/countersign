@@ -46,6 +46,7 @@ Verified on a fresh clone: the install is idempotent, and `run.sh` installs the 
 | Receipts and chain | **VERIFIED** | every verdict persists a receipt; `countersign replay` re-derives each one from the inputs it recorded. Latest run: `2 receipts, 0 failed. chain head 3aa2e3746031` |
 | Replay as a CI gate | **GREEN** | [`.github/workflows/replay.yml`](.github/workflows/replay.yml) replays a committed store on every push, then forges a verdict and asserts the replay **fails**. Locally the forged store exits 2: `3 receipts, 1 failed. chain head 2e35c04a89ac` |
 | Hosted pages | **LIVE** | product site [countersign-eight.vercel.app](https://countersign-eight.vercel.app), published record [subheeksh5599.github.io/countersign](https://subheeksh5599.github.io/countersign/) |
+| Verify the record in a browser | **LIVE** | [countersign-eight.vercel.app/record](https://countersign-eight.vercel.app/record) recomputes the four receipts a real session wrote, client side, and prints the chain head it computes beside the one the CLI prints; both read `e83186b797d1a732…`. Two controls edit a copy of a receipt in the tab and the checks turn to `FAIL`, which is the failure CI catches. A Node run of the same port reproduces the CLI's per-receipt hashes exactly. |
 
 Nothing in this repository reports a credential or a service as reachable that is not. The only unconfigured path is the vendor CLI driver, and the console names the driver that actually ran: the vendor driver needs the CLI on this machine's PATH and its key in the runtime's environment, and the bundled reference driver needs neither.
 
@@ -53,7 +54,7 @@ Nothing in this repository reports a credential or a service as reachable that i
 
 [![▶ Watch the demo: 1:12, a real screen capture of the running console](docs/media/countersign-demo-poster.webp)](https://youtu.be/NQ43DN8eA8I)
 
-**[▶ Watch the demo (1:12)](https://youtu.be/NQ43DN8eA8I)** &nbsp;·&nbsp; **[ Local copy ↗ ](docs/media/countersign-demo.mp4)** &nbsp;·&nbsp; **[ The intro on its own ↗ ](docs/media/countersign-intro.mp4)** &nbsp;·&nbsp; **[ Posted on X ↗ ](https://x.com/KomariS18774/status/2104154580519178708)** &nbsp;·&nbsp; **[ What's real vs pending ↗ ](#whats-real-vs-pending--the-honesty-table)**
+**[▶ Watch the demo (1:12)](https://youtu.be/NQ43DN8eA8I)** &nbsp;·&nbsp; **[ Verify the record in your browser ↗ ](https://countersign-eight.vercel.app/record)** &nbsp;·&nbsp; **[ Local copy ↗ ](docs/media/countersign-demo.mp4)** &nbsp;·&nbsp; **[ The intro on its own ↗ ](docs/media/countersign-intro.mp4)** &nbsp;·&nbsp; **[ Posted on X ↗ ](https://x.com/KomariS18774/status/2104154580519178708)** &nbsp;·&nbsp; **[ What's real vs pending ↗ ](#whats-real-vs-pending--the-honesty-table)**
 
 _One take, website only, no terminal and no editor: every panel is filled by a real run of the same gate the test suite drives._ It opens on a 26.5 s composition that states the failure, then shows the console refusing a real agent turn, the record it leaves behind, and the receipt replay.
 

@@ -1,0 +1,43 @@
+{
+  "affected_paths": [
+    "pricing.ts"
+  ],
+  "branch": "master",
+  "classification_reason": "tool apply_diff is classified state-changing",
+  "current_hashes": {
+    "pricing.ts": "f0fbfbde9dcf95bbfe30f811f568d97d071143a332ec895610803865ca406382"
+  },
+  "evidence_hashes": {
+    "pricing.ts": "5db23dc826cf874a98eb3de4a59017b55304972bc051bc655da45640fd7bab35"
+  },
+  "exit_code": 2,
+  "git_head": "6138eb60d1becbf70f06525aa356ad27a28634cc",
+  "previous_receipt_hash": "7412c17719469ec52e4ef1b74b0d32914113288151e39a09cde186ee08be35c3",
+  "reason_code": "EVIDENCE_SUPERSEDED",
+  "reason_codes": [
+    "EVIDENCE_SUPERSEDED"
+  ],
+  "reason_detail": [
+    {
+      "code": "EVIDENCE_SUPERSEDED",
+      "current": "f0fbfbde9dcf95bbfe30f811f568d97d071143a332ec895610803865ca406382",
+      "held": "5db23dc826cf874a98eb3de4a59017b55304972bc051bc655da45640fd7bab35",
+      "why": "the file changed after this task observed it"
+    }
+  ],
+  "receipt_hash": "352604d27b92502a8f109fad04e3261dbad4eaf3f88dd62902df188764ddebb5",
+  "receipt_id": "rcpt_00002_e8659a4144cc",
+  "repository": "/tmp/csign_live",
+  "runtime_latency_ms": 28,
+  "seq": 2,
+  "session_id": "eea2941f4db4a1f67c401695b74446d0",
+  "timestamp": "2026-09-27T07:37:50Z",
+  "tool_arguments": {
+    "diff": "<<<<<<< SEARCH\n:start_line:1\n-------\nexport const rate = 1\n=======\nexport const rate = 5\n>>>>>>> REPLACE",
+    "path": "/tmp/csign_live/pricing.ts"
+  },
+  "tool_arguments_hash": "04fd724b716b87473e174ab698e0d19e177d2c5d367f115d963fa15296e7ba80",
+  "tool_classification": "state_changing",
+  "tool_name": "apply_diff",
+  "verdict": "REFUSED"
+}
