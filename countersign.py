@@ -16,6 +16,7 @@ Modes (hook payload on stdin, JSON):
   check           before a state-changing call: admit, or refuse with exit 2
   refresh         re-hash held evidence and update the manifest (real mutation)
   recheck         dry run: compute the verdict, change nothing, write no receipt
+  status          print what this workspace's store holds, for a person at a terminal
   replay          recompute every stored verdict from its own recorded inputs
   probe           record raw payloads without ever blocking
   export          write one hashed evidence record per task
@@ -422,6 +423,67 @@ def blob_digest(commit, rel):
     return digest(out.stdout)
 
 
+MODES = ("session-start", "record", "check", "refresh", "recheck", "replay", "status",
+         "probe", "export")
+
+
+def status_report():
+    """What a person at a terminal wants to know before trusting this workspace: which
+    store is in play, what the active session holds, whether any of it has moved, and
+    whether the receipt chain still holds. Reads the store; changes nothing."""
+    print(f"countersign {VERSION if 'VERSION' in globals() else ''}".rstrip())
+    print(f"  workspace      {WS}")
+    print(f"  store          {STORE}")
+    sessions = sorted(f[:-5] for f in os.listdir(TASKS)) if os.path.isdir(TASKS) else []
+    print(f"  sessions       {len(sessions)} manifest(s)"
+          + (f", newest {sessions[-1]}" if sessions else ""))
+    active = None
+    if sessions:
+        for name in reversed(sessions):
+            try:
+                m = json.load(open(os.path.join(TASKS, name + ".json"), encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            active = m
+            break
+    if active:
+        files = active.get("files") or {}
+        stale = []
+        for rel, rec in files.items():
+            path = os.path.join(WS, rel)
+            cur = None
+            if os.path.exists(path):
+                with open(path, "rb") as fh:
+                    cur = digest(fh.read())
+            if cur != rec.get("digest"):
+                stale.append(rel)
+        print(f"  active session {active.get('task')}")
+        print(f"  held evidence  {len(files)} file(s), {len(stale)} no longer matching")
+        for rel in stale:
+            print(f"                   {rel}")
+    rs = []
+    if os.path.isdir(RECEIPTS):
+        for f in sorted(os.listdir(RECEIPTS)):
+            if f.endswith(".json"):
+                try:
+                    rs.append(json.load(open(os.path.join(RECEIPTS, f), encoding="utf-8")))
+                except (OSError, json.JSONDecodeError):
+                    pass
+    refused = sum(1 for r in rs if r.get("verdict") == "REFUSED")
+    good, prev = 0, None
+    for r in rs:
+        body = {k: v for k, v in r.items() if k != "receipt_hash"}
+        if digest(canon(body).encode()) == r.get("receipt_hash") and \
+                r.get("previous_receipt_hash") == prev:
+            good += 1
+        prev = r.get("receipt_hash")
+    print(f"  receipts       {len(rs)} ({refused} refusal(s), {len(rs) - refused} admission(s))")
+    print(f"  chain          {'valid' if good == len(rs) else 'BROKEN'} "
+          f"({good}/{len(rs)} link and hash checks pass)")
+    print("  modes          " + ", ".join(MODES))
+    return 0 if good == len(rs) else 2
+
+
 def replay_store(as_json=False):
     """Recompute every stored verdict from the inputs the receipt itself recorded.
 
@@ -508,6 +570,19 @@ def replay_store(as_json=False):
 
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
+    if mode in ("status", "--status"):
+        if not WS:
+            bind_workspace(os.environ.get("COUNTERSIGN_WORKSPACE") or os.getcwd())
+        if STORE is None:
+            bind_workspace(WS)
+        return status_report()
+    if mode in ("--help", "-h", "help"):
+        print(__doc__)
+        return 0
+    if mode and mode not in MODES:
+        print(f"unknown mode: {mode}", file=sys.stderr)
+        print("modes: " + ", ".join(MODES), file=sys.stderr)
+        return 2
     if mode == "replay":
         if not WS:
             bind_workspace(os.environ.get("COUNTERSIGN_WORKSPACE") or os.getcwd())
