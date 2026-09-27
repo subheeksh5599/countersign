@@ -210,7 +210,14 @@ def chain_state(ws):
 
 
 def hook_settings_paths(ws):
-    return [os.path.join(ws, ".bob", "settings", "settings.json"),
+    """Every path a workspace hook block has been seen to live in. The installer writes
+    `.bob/settings.json`; some workspaces carry `.bob/settings/settings.json`; a copy of
+    the block is kept under `.countersign/` for inspection. Missing one of these makes the
+    console understate a workspace install and report the machine wide one instead."""
+    if not ws:
+        return []
+    return [os.path.join(ws, ".bob", "settings.json"),
+            os.path.join(ws, ".bob", "settings", "settings.json"),
             os.path.join(ws, ".countersign", "hooks.json")]
 
 
