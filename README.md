@@ -22,6 +22,16 @@ OBSERVED  ≠  CURRENT   ⇒   REFUSED (exit 2)
 
 There is no `WARNED` and no `ADMITTED_WITH_NOTES`. Either the evidence a task holds describes the repository at the moment of the call, or the state-changing call is refused and says which fact moved.
 
+## Run it
+
+```
+git clone https://github.com/subheeksh5599/countersign && cd countersign
+sh install.sh --global     # the gate, the CLI wrapper, and the hook block
+sh run.sh                  # runtime on :4319, console on http://127.0.0.1:4311/console
+```
+
+Verified on a fresh clone: the install is idempotent, and `run.sh` installs the console's dependencies on its first run, builds it, starts both processes and prints the URL. Nothing else is required. `sh run.sh --runtime-only` skips the console, and `COUNTERSIGN_WORKSPACE=/path/to/repo sh run.sh` points the runtime at a repository you already have.
+
 ## Live status
 
 **The gate, the runtime and the console are implemented and exercised on this machine.** `python3 scripts/acceptance.py` drives 21 steps against a live runtime and reports **21 passed, 0 failed**: it creates a repository, connects it, protects it, opens a session, records a read, changes the file from a second process, attempts the edit, reads the refusal, refreshes the evidence, retries, verifies the chain and runs the self-test.
@@ -32,6 +42,7 @@ There is no `WARNED` and no `ADMITTED_WITH_NOTES`. Either the evidence a task ho
 | Runtime | **LIVE** | `http://127.0.0.1:4319`, serving the store the gate wrote; one decision measured at 308 ms against a 200 observation manifest |
 | Console | **LIVE** | five pages at `http://127.0.0.1:4311/console`, reading that runtime over HTTP and SSE; with the runtime down every page says `DISCONNECTED` and prints the start command |
 | Real refusal from a real agent session | **REFUSED** | task `eea2941f4db4a1f67c401695b74446d0` — 1.05 Bobcoin, 44.6 s, 4 state-changing attempts, **4 refused with exit 2 / `EVIDENCE_SUPERSEDED`**, 4 chained receipts, file untouched ([`docs/LIVE_RUN.md`](docs/LIVE_RUN.md)) |
+| Refusal on the real hook path | **REFUSED** | the payloads a live session emitted, replayed through the same modes the installed hook invokes: `apply_diff` → exit 2, `EVIDENCE_SUPERSEDED`, held `baa5252515ea` vs on disk `f24af5254d22` ([`docs/HOOK_RUN.md`](docs/HOOK_RUN.md), `sh scripts/replay_real_refusal.sh`) |
 | Receipts and chain | **VERIFIED** | every verdict persists a receipt; `countersign replay` re-derives each one from the inputs it recorded. Latest run: `2 receipts, 0 failed. chain head 3aa2e3746031` |
 | Replay as a CI gate | **GREEN** | [`.github/workflows/replay.yml`](.github/workflows/replay.yml) replays a committed store on every push, then forges a verdict and asserts the replay **fails**. Locally the forged store exits 2: `3 receipts, 1 failed. chain head 2e35c04a89ac` |
 | Hosted pages | **LIVE** | product site [countersign-eight.vercel.app](https://countersign-eight.vercel.app), published record [subheeksh5599.github.io/countersign](https://subheeksh5599.github.io/countersign/) |
@@ -67,6 +78,7 @@ flowchart TD
 
 ## Table of contents
 
+- [Run it](#run-it)
 - [Live status](#live-status)
 - [▶ Demo](#-demo)
 - [The 20-second pitch](#the-20-second-pitch)
@@ -385,6 +397,8 @@ Event names on the stream: `runtime_hello`, `session_started`, `file_read`, `evi
 
 **Not claimed.** Organisation-wide enforcement as the default. A per-machine guarantee: a repository guarded here is not guarded on a machine without the hook. Visibility of changes that have not been fetched. A signed store. Any statement about the vendor runtime's own behaviour beyond what its documentation says, quoted in [The problem I set out to solve](#the-problem-i-set-out-to-solve).
 
+**Two halves of one guarantee.** Enforcement is local; auditing is not. The hook is installed per workspace or per machine, so the machine where the agent runs is the one that refuses the edit — and on a machine with no hook, nothing stops it. What travels between machines is the receipt. `countersign replay` re-derives every verdict from the inputs that receipt itself recorded, so a machine that never ran the gate can check that a verdict was *reached* rather than typed, and `.github/workflows/replay.yml` runs that on every push and then forges a verdict to prove the replay has teeth. The halves say different things and neither substitutes for the other: the local half stops the edit, the server half proves what happened. A repository is guarded only where the hook is installed.
+
 **Bounded by inputs.** A local gate can only compare what it can see, so a remote branch that was never fetched is invisible to it: `docs/MULTI_DEV_RUN.md` records a real run where the write is admitted before the fetch and refused after it. The gate is also path-scoped: it refuses a write to a path whose evidence moved, not a write anywhere in the repository because something else moved.
 
 **Deliberate stops.** No override flag that admits a call whose evidence moved — that is the whole point. No verdict based on the content of the diff. No model in the decision path. No automatic "refresh everything and continue" after a refusal, because whether the new file content is what the task should be working from is a decision, not a default.
@@ -425,10 +439,12 @@ scripts/acceptance.py            the 21 step fresh machine acceptance run
 scripts/forge_a_verdict.py       forge a verdict, used by CI to prove the replay has teeth
 .github/workflows/replay.yml     replay the committed bundle, then assert a forgery fails
 scripts/acceptance_gate.sh       the same mechanism at gate level, no runtime
+scripts/replay_real_refusal.sh   the captured hook payloads, driven to a refusal
 docs/LIVE_RUN.md                 a refusal recorded from a real agent session
+docs/HOOK_RUN.md                 the same refusal on the real hook path, reproducible
 docs/MULTI_DEV_RUN.md            admitted before fetch, refused after
 docs/SCENE_REVISION_MOVED.md     identical bytes, moved revision, refused
-docs/evidence-store/             recorded stores from four real scenes
+docs/evidence-store/             recorded stores from six real scenes
 docs/media/                      the demo, its poster, and the console screenshots
 demo/                            the narration, the cut scripts and the intro composition
 ```

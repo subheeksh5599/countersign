@@ -25,6 +25,15 @@ What this gate does not do, in the same breath as what it does.
 - Command payloads were not exercised in the captured live session: the payloads on
   record come from `glob`, `read_file` and `apply_diff`. Command-result handling is
   covered by tests and by the demo scene, not yet by a captured live payload.
+- The gate reads the payload's `path` and its own recorded digests, and deliberately does
+  not read the content of the change. The captured `apply_diff` payload does carry the
+  pending diff in `tool_input.diff` (a real one sits in `tests/fixtures/real_payloads.json`),
+  and the gate ignores it. So a wrong or hostile edit to a file that has **not** moved is
+  admitted: this gate enforces whether the evidence a task holds still describes the
+  repository, it does not judge whether the change itself is safe. An agent that reads a
+  poisoned file and writes from it passes, because the evidence it holds does describe the
+  file. Catching that is a different mechanism, a reviewer or a policy check or a sandbox,
+  and this gate does not claim it.
 - Nothing here reads a private API. The gate consumes the public hook payload and the
   workspace itself.
 

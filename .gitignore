@@ -4,6 +4,13 @@ __pycache__/
 *.pyc
 lens.html
 .countersign-runtime.log
+.countersign-console.log
+# credentials never belong in the repository; the redaction test uses a fake, truncated value
+.env
+.env.*
+!.env.example
+bob.env
+**/.bob/settings.json
 landing/AGENTS.md
 landing/CLAUDE.md
 .countersign-runtime.log
