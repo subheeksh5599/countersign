@@ -169,14 +169,22 @@
     stat("exit 2", "REFUSED", "the call does not run, and the refusal names which fact moved"),
   )
   #v(0.6cm)
-  #lead[Six reasons it can refuse, each with its own code:]
-  #v(0.25cm)
+  #lead[Eight reasons it can refuse, each with its own code:]
+  #v(0.3cm)
   #small[
-    `EVIDENCE_SUPERSEDED` the file changed after the task observed it · `REVISION_MOVED` the path
-    was committed at a different revision · `CROSS_TASK_EVIDENCE` another task observed it first ·
-    `COMMIT_RESULT_CHANGED` a recorded command now returns something else ·
-    `UNSUPPORTED_SUBTASK_EVIDENCE` the evidence belongs to a different subtask ·
-    `UNOBSERVED_TARGET` the call targets a path this gate never observed
+    #grid(
+      columns: (1fr, 1fr),
+      gutter: 0.5cm,
+      row-gutter: 0.24cm,
+      [`NO_MANIFEST` the task holds no manifest],
+      [`REVISION_MOVED` committed at a different revision],
+      [`OUTSIDE_WORKSPACE` the target is outside the workspace],
+      [`CROSS_TASK_EVIDENCE` the record belongs to another task],
+      [`UNVERIFIED_TARGET` the path was never read],
+      [`UNSUPPORTED_SUBTASK_EVIDENCE` evidence from another subtask],
+      [`EVIDENCE_SUPERSEDED` the file moved after the read],
+      [`COMMAND_RESULT_CHANGED` a recorded command now contradicts],
+    )
   ]
 ]
 
@@ -254,7 +262,7 @@
     gutter: 0.4cm,
     stat("1.05", "BOBCOINS SPENT", "a real task, not a rehearsal"),
     stat("44.6s", "WALL TIME", "eight tool calls"),
-    stat("4", "ATTEMPTS REFUSED", "across three different edit tools"),
+    stat("4", "ATTEMPTS REFUSED", "across two edit tools"),
     stat("0", "BYTES CHANGED", "the file was left untouched"),
   )
   #v(0.65cm)
