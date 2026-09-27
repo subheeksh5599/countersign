@@ -10,3 +10,6 @@ landing/CLAUDE.md
 .countersign-console.log
 demo/intro/AGENTS.md
 demo/intro/CLAUDE.md
+
+landing/tsconfig.tsbuildinfo
+*.tsbuildinfo
