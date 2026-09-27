@@ -3,3 +3,4 @@ demo-workspace/
 __pycache__/
 *.pyc
 lens.html
+.countersign-runtime.log
