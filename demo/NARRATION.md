@@ -1,13 +1,13 @@
 # Narration — Countersign demo
 
-Delivered: `demo/media/countersign-demo.mp4` — **72.8s**, 1364x766, 30fps, male voice.
+Delivered: `demo/media/countersign-demo.mp4` — **71.6s**, 1364x766, 30fps, male voice.
 Standalone intro for a social post: `demo/media/countersign-intro.mp4` — **26.5s**.
 Source recording: `/home/arch/Videos/recording_2026-09-27_14.35.18.mp4` (122.6s, silent, VFR).
 Intro composition: `demo/intro/` (hyperframes, 1920x1080, rendered then scaled to the recording).
 
-Twelve lines, 56.3s of speech across 72.8s. The refusal itself is deliberately silent: the
-line before it ends at 45.9s and the next begins at 48.0s, so the verdict and both digests
-land without a voice over them.
+Twelve lines, 55.4s of speech across 71.6s. The refusal itself is deliberately silent: it
+lands at 45.3s and the next line begins at 48.0s, so the verdict and both digests land without
+a voice over them.
 
 ## Voice
 
@@ -26,16 +26,18 @@ Same line, three voices, to pick from — `demo/media/voice-samples/`:
 | kept | source range | length | what it shows |
 |------|--------------|--------|----------------|
 | 1 | 3.5 – 8.0 | 4.5s | the claim on the site, then the failure story |
-| 2 | 41.5 – 57.0 | 15.5s | the operator bar, create demo repository, run one real agent turn |
-| 3 | 57.0 – 67.5 | 10.5s | the refusal: step table, REFUSED / EVIDENCE_SUPERSEDED, live events, held vs disk |
-| 4 | 91.5 – 96.0 | 4.5s | evidence: each session's manifest with refusals and admissions counted |
-| 5 | 96.0 – 100.0 | 4.0s | interceptor: every intercepted call, classified, with its verdict |
-| 6 | 102.0 – 106.4 | 4.4s | receipts: replay both receipts, 0 failed, held for 3.1s at the end |
+| 2 | 41.5 – 43.0 | 1.7s | the console before anything runs: receipts 0, no verdict |
+| 3 | 44.2 – 57.0 | 12.6s | the operator bar, create demo repository, run one real agent turn, the result |
+| 4 | 57.0 – 67.5 | 10.5s | the refusal: step table, REFUSED / EVIDENCE_SUPERSEDED, live events, held vs disk |
+| 5 | 91.5 – 96.0 | 4.5s | evidence: each session's manifest with refusals and admissions counted |
+| 6 | 96.0 – 100.0 | 4.0s | interceptor: every intercepted call, classified, with its verdict |
+| 7 | 102.0 – 106.4 | 4.4s | receipts: replay both receipts, 0 failed, held for 3.1s at the end |
 
 | removed | source range | why |
 |---------|--------------|-----|
 | the rest of the landing page | 0 – 3.5, 8.0 – 41.5 | scrolling with no action; the four seconds kept carry the claim |
 | dead time in the console | inside 41.5 – 57.0 | frames where nothing changed while the page sat idle |
+| a scroll between two top-strip views | 43.0 – 44.2 | it previews the refusal, so the story reached its ending before the narration set it up |
 | the self-test page | 67.5 – 91.5 | the page's own prose with no result on screen; the evidence table two beats later is the same claim with numbers |
 | the static record page | 107 – 122 | it is a published snapshot of a store, not the product, and the browser's transfer chrome is visible while it loads |
 
@@ -50,11 +52,11 @@ Same line, three voices, to pick from — `demo/media/voice-samples/`:
 | i5 | 20.8s | 4.4s | intro: the name |
 | d1 | 27.0s | 4.1s | landing: the claim |
 | d2 | 32.0s | 6.9s | console: a real turn, with a second process moving the file |
-| d3 | 39.8s | 6.1s | console: read, recorded as evidence, then the ask |
+| d3 | 39.9s | 6.1s | console: read, recorded as evidence, then the ask |
 | d4 | 48.0s | 6.1s | the refusal: exit 2, older evidence, the edit does not run |
-| d5 | 57.3s | 5.4s | evidence: each session's manifest |
-| d6 | 63.5s | 4.4s | interceptor: every call kept and classified |
-| d7 | 68.8s | 3.7s | receipts: replays re-derive both verdicts, none fails |
+| d5 | 55.4s | 5.4s | evidence: each session's manifest |
+| d6 | 61.6s | 3.5s | interceptor: every call kept and classified |
+| d7 | 66.9s | 3.7s | receipts: replays re-derive both verdicts, none fails |
 
 ## Text as spoken
 
@@ -68,7 +70,7 @@ Same line, three voices, to pick from — `demo/media/voice-samples/`:
 **d3** — The agent reads, records that digest as evidence, then asks to change the file.
 **d4** — Exit two. The evidence the task held is older than the file on disk, so the edit never runs.
 **d5** — Each session keeps its own manifest: files, refusals, receipts.
-**d6** — Every intercepted call is kept, classified, with its verdict.
+**d6** — Every call is kept, classified, with its verdict.
 **d7** — Replays re-derive both verdicts. None fails.
 
 ## Reproduce and check
@@ -83,5 +85,5 @@ sh demo/scripts/verify_cut.sh           # fails loudly, see below
 `verify_cut.sh` checks the delivered file, not the intent: duration in range, an audio stream
 present, every one of the 12 lines starting within 0.35s of where it was planned, a silence of
 at least 0.9s covering 46.4-47.9s so nothing is spoken over the refusal, at least three frames
-carrying REFUSED / EVIDENCE_SUPERSEDED, no frame carrying a cold loader, browser transfer
+carrying REFUSED / EVIDENCE_SUPERSEDED (32 do), no frame carrying a cold loader, browser transfer
 chrome, an error page or the static record page, and median F0 inside the male band.

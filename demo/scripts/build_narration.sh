@@ -33,5 +33,5 @@ say d2 "The console drives a real turn against a demo repository, with a second 
 say d3 "The agent reads, records that digest as evidence, then asks to change the file."
 say d4 "Exit two. The evidence the task held is older than the file on disk, so the edit never runs."
 say d5 "Each session keeps its own manifest: files, refusals, receipts."
-say d6 "Every intercepted call is kept, classified, with its verdict."
+say d6 "Every call is kept, classified, with its verdict."
 say d7 "Replays re-derive both verdicts. None fails."

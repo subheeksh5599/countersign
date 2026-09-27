@@ -33,7 +33,7 @@ ffmpeg -hide_banner -nostats -i "$DEMO" -af "silencedetect=noise=-42dB:d=0.25" -
 python3 -c "
 import re, sys
 plan = {'i1':0.6,'i2':5.5,'i3':10.4,'i4':17.0,'i5':20.8,'d1':27.0,'d2':32.0,'d3':39.8,
-        'd4':48.0,'d5':57.3,'d6':63.5,'d7':68.8}
+        'd4':48.0,'d5':55.4,'d6':61.6,'d7':66.9}
 starts=[]
 for line in sys.stdin:
     m=re.search(r'silence_end: ([0-9.]+)', line)

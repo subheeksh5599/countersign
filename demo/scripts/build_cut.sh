@@ -23,19 +23,22 @@ mkdir -p "$OUT"
 
 # --- 1. the cut ----------------------------------------------------------------------
 # 1  3.5   -  8.0   landing: the claim, then the failure story
-# 2  41.5  - 57.0   console: the operator bar, create demo repository, run the agent turn
-# 3  57.0  - 67.5   the refusal: steps, REFUSED / EVIDENCE_SUPERSEDED, live events, held vs disk
-# 4  91.5  - 96.0   evidence: every session's manifest, with refusals and admissions counted
-# 5  96.0  -100.0   interceptor: every intercepted call, classified, with its verdict
-# 6  102.0 -106.4   receipts: replay both receipts, 0 failed, chain head held at the end
+# 2  41.5  - 43.0   console, before anything runs: receipts 0, no verdict
+# 3  44.2  - 57.0   the operator bar, create demo repository, run the agent turn, the result
+#                   (43.0-44.2 is a scroll that previews the refusal before the story reaches it)
+# 4  57.0  - 67.5   the refusal: steps, REFUSED / EVIDENCE_SUPERSEDED, live events, held vs disk
+# 5  91.5  - 96.0   evidence: every session's manifest, with refusals and admissions counted
+# 6  96.0  -100.0   interceptor: every intercepted call, classified, with its verdict
+# 7  102.0 -106.4   receipts: replay both receipts, 0 failed, chain head held at the end
 ffmpeg -v error -y -i "$SRC" -i "$INTRO" -filter_complex "\
 [0:v]trim=start=3.5:end=8.0,setpts=PTS-STARTPTS[s0];\
-[0:v]trim=start=41.5:end=57.0,setpts=PTS-STARTPTS[s1];\
+[0:v]trim=start=41.5:end=43.0,setpts=PTS-STARTPTS[s1];\
+[0:v]trim=start=44.2:end=57.0,setpts=PTS-STARTPTS[s1b];\
 [0:v]trim=start=57.0:end=67.5,setpts=PTS-STARTPTS[s2];\
 [0:v]trim=start=91.5:end=96.0,setpts=PTS-STARTPTS[s3];\
 [0:v]trim=start=96.0:end=100.0,setpts=PTS-STARTPTS[s4];\
 [0:v]trim=start=102.0:end=106.4,setpts=PTS-STARTPTS[s5];\
-[s0][s1][s2][s3][s4][s5]concat=n=6:v=1:a=0[cut];\
+[s0][s1][s1b][s2][s3][s4][s5]concat=n=7:v=1:a=0[cut];\
 [cut]fps=${FPS},scale=${W}:${H}:flags=lanczos,setsar=1,tpad=stop_mode=clone:stop_duration=${TAIL}[cutp];\
 [1:v]fps=${FPS},scale=${W}:${H}:flags=lanczos,setsar=1[intro];\
 [intro][cutp]concat=n=2:v=1:a=0[vout]" \
@@ -56,8 +59,8 @@ tts, cut, out = sys.argv[1], sys.argv[2], sys.argv[3]
 # line -> absolute start on the final timeline
 PLACE = [
     ("i1", 0.6), ("i2", 5.5), ("i3", 10.4), ("i4", 17.0), ("i5", 20.8),
-    ("d1", 27.0), ("d2", 32.0), ("d3", 39.8), ("d4", 48.0),
-    ("d5", 57.3), ("d6", 63.5), ("d7", 68.8),
+    ("d1", 27.0), ("d2", 32.0), ("d3", 39.9), ("d4", 48.0),
+    ("d5", 55.4), ("d6", 61.6), ("d7", 66.9),
 ]
 
 def dur(p):
