@@ -14,7 +14,7 @@
 
 </div>
 
-An agent reads `src/config.ts`, decides what to change, and asks to write it. Between the read and the write the file can change, the branch can move, a recorded command can return something else, and none of that appears anywhere in the transcript. Most agent stacks answer the easy question, _did the tool call succeed?_ Countersign answers the harder one: **is the evidence this task is holding still an accurate description of the repository the call is about to change?** It is a gate in front of the write, not a reviewer after it. When the answer is no the call does not run, the exit code is 2, and the refusal names the digest the task held, the digest on disk, the reason and the recovery steps.
+An agent reads a file, `src/config.ts` in the demonstration repository, decides what to change, and asks to write it. Between the read and the write the file can change, the branch can move, a recorded command can return something else, and none of that appears anywhere in the transcript. Most agent stacks answer the easy question, _did the tool call succeed?_ Countersign answers the harder one: **is the evidence this task is holding still an accurate description of the repository the call is about to change?** It is a gate in front of the write, not a reviewer after it. When the answer is no the call does not run, the exit code is 2, and the refusal names the digest the task held, the digest on disk, the reason and the recovery steps.
 
 ```
 OBSERVED  ≠  CURRENT   ⇒   REFUSED (exit 2)
@@ -324,7 +324,7 @@ A person approves at two points. Installing the hook is a person's decision, mad
 | Every verdict persists a receipt, chained and verifiable | ✅ | `countersign replay` on the demo store: 2 receipts, 0 failed, chain head `3aa2e3746031` |
 | The decision is deterministic and spends no tokens | ✅ | no model call site in the decision path; 308 ms against a 200 observation manifest |
 | The console drives real operations | ✅ | connect, protect, run an agent turn, replay receipts, all against the running runtime |
-| Enforced on the machine where the agent runs | ✅ | hook installed per workspace (`.bob/settings.json`) or per machine (`~/.bob/settings/settings.json`) |
+| Enforced on the machine where the agent runs | ✅ | hook installed per workspace (that workspace's `.bob/settings.json`) or per machine (`~/.bob/settings/settings.json`) |
 | A displayed verdict can be checked afterwards, anywhere | ✅ | `countersign replay` plus `.github/workflows/replay.yml`, which also forges a verdict and asserts the replay catches it |
 | Vendor CLI driver | ⚠️ | implemented and selectable; needs the CLI on PATH and its key in the runtime's environment. The demo's refusal uses the bundled reference driver, which is named in the result |
 | Organisation-wide enforcement as the default | ⚠️ | not built. The hook is per workspace or per machine at install time. What travels is the receipt, and the CI replay checks verdicts on a machine that has no hook: it proves what happened, it does not stop an edit there |
@@ -443,7 +443,7 @@ COUNTERSIGN_WORKSPACE=/path/to/repo sh run.sh
 
 # install it into a workspace
 sh install.sh /path/to/workspace              # prints the hook block it would merge
-sh install.sh /path/to/workspace --write      # merges into .bob/settings.json
+sh install.sh /path/to/workspace --write      # merges the hook block into that workspace's .bob/settings.json
 
 # the gate
 countersign status                            # what this workspace's store holds
