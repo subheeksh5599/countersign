@@ -95,12 +95,15 @@ function openStream() {
   };
 }
 
+// Subscribers get the event itself. Refetching hooks ignore the argument and simply
+// reload when anything happens; the event list renders it. An earlier version replaced
+// every payload with a synthetic {event: "changed"}, which is why the live list showed
+// nothing but the word "changed".
 function onRuntimeEvent(fn: (ev: RuntimeEvent) => void) {
-  const wrapped = () => fn({ event: "changed" });
-  listeners.add(wrapped);
+  listeners.add(fn);
   openStream();
   return () => {
-    listeners.delete(wrapped);
+    listeners.delete(fn);
   };
 }
 

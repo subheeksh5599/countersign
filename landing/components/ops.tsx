@@ -94,13 +94,6 @@ export function AgentTurn({ onDone }: { onDone?: () => void }) {
         ) : null
       }
     >
-      <p className="mb-3 max-w-[70ch] text-body text-graphite">
-        One real turn against the protected repository. The agent reads a file, records it
-        as evidence, then attempts a state-changing call through the same gate command the
-        hook runs. With the second writer enabled a real process rewrites that file inside
-        the window between the read and the attempt.
-      </p>
-
       <label className="mb-1 block font-mono text-caption uppercase tracking-[0.14em] text-slate">
         request
       </label>
@@ -123,9 +116,12 @@ export function AgentTurn({ onDone }: { onDone?: () => void }) {
             <option value="vendor">vendor CLI</option>
           </select>
         </label>
-        <label className="flex items-center gap-2 text-body text-graphite">
+        <label
+          className="flex items-center gap-2 text-body text-graphite"
+          title="start a real second process that rewrites the file between the agent's read and its attempt"
+        >
           <input type="checkbox" checked={writer} onChange={(e) => setWriter(e.target.checked)} />
-          a second process writes the file during the turn
+          second writer moves the file
         </label>
         <button
           type="button"
@@ -136,12 +132,6 @@ export function AgentTurn({ onDone }: { onDone?: () => void }) {
           {busy ? "running" : "run agent turn"}
         </button>
       </div>
-
-      <p className="mb-3 font-mono text-[11.5px] text-slate">
-        reference agent: bundled, deterministic, no model and no key. vendor CLI: the vendor
-        binary on this machine&apos;s PATH, with its key in the runtime environment. The
-        driver that ran is named in the result.
-      </p>
 
       {err ? <div className="mb-3 text-body text-ember-text">{err}</div> : null}
 
@@ -254,7 +244,7 @@ export function ReplayPanel() {
   const s = report?.summary;
   return (
     <Panel
-      title="replay every verdict from its own inputs"
+      title="replay receipts"
       tone={s && !s.ok ? "alert" : "plain"}
       right={
         s ? (
@@ -264,13 +254,6 @@ export function ReplayPanel() {
         ) : null
       }
     >
-      <p className="mb-3 max-w-[70ch] text-body text-graphite">
-        Each stored receipt is re-derived from the inputs it recorded: the hash is recomputed,
-        the chain link is checked, and the verdict is compared against what its own two
-        digests imply. A receipt that claims an admission while its digests differ fails, and
-        so does one that refuses a digest it also records as unchanged. This needs no
-        original machine, so the same call runs in CI after a clone.
-      </p>
       <div className="mb-3 flex items-center gap-3">
         <button
           type="button"
@@ -368,7 +351,7 @@ export function StalePanel() {
 
   return (
     <Panel
-      title="evidence that moved, as recorded"
+      title="what moved"
       tone={open.length ? "alert" : "plain"}
       right={
         <span className="font-mono text-caption uppercase tracking-[0.14em] text-graphite">
@@ -376,13 +359,8 @@ export function StalePanel() {
         </span>
       }
     >
-      <p className="mb-3 max-w-[70ch] text-body text-graphite">
-        The watcher writes each transition to the workspace store when it happens, so this is a
-        record with a time on it rather than a fresh computation: when the evidence was first
-        seen to disagree, what it held, what the file became, and when it matched again.
-      </p>
       {rows.length === 0 ? (
-        <Empty>No held evidence has moved since this store was opened.</Empty>
+        <Empty>Holding steady. Nothing has moved.</Empty>
       ) : (
         <div className="overflow-hidden rounded-window border border-gridline">
           <table className="w-full text-left">

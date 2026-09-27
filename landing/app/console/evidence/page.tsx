@@ -190,7 +190,7 @@ export default function EvidencePage() {
         {rows.length === 0 ? (
           <Empty>
             {filter === "all"
-              ? "This session holds no evidence yet. Reads recorded through the hook appear here."
+              ? "Nothing yet."
               : `No evidence item is currently ${filter}.`}
           </Empty>
         ) : (

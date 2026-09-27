@@ -13,6 +13,7 @@ code, and a real file write only when the gate admitted it.
 Prints one JSON object: the plan, every step with its exit code, and what the gate said.
 """
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -77,6 +78,13 @@ def main():
     ap.add_argument("--hold", type=float, default=0.0,
                     help="seconds to hold between recording evidence and the check; a real "
                          "second writer can move the file inside this window")
+    ap.add_argument("--ready-marker", default="",
+                    help="file to touch once evidence is recorded, so a second process knows "
+                         "the read has happened and any write now will supersede it")
+    ap.add_argument("--wait-for-move", type=float, default=0.0,
+                    help="after signalling readiness, wait until the target file's bytes "
+                         "actually differ before attempting the call: the order of read, "
+                         "external write and check is then deterministic, not a race")
     a = ap.parse_args()
     ws = os.path.abspath(a.workspace)
     steps = []
@@ -107,7 +115,31 @@ def main():
     emit("read_file", path=p["path"], exit_code=r["exit_code"],
          detail="digest recorded as evidence")
 
-    if a.hold > 0:
+    if a.ready_marker:
+        try:
+            with open(a.ready_marker, "w", encoding="utf-8") as fh:
+                fh.write(a.session)
+        except OSError as e:
+            emit("marker_error", detail=str(e))
+
+    if a.wait_for_move > 0:
+        held = hashlib.sha256(before.encode()).hexdigest()
+        waited, moved = 0.0, False
+        while waited < a.wait_for_move:
+            try:
+                with open(target, "rb") as fh:
+                    if hashlib.sha256(fh.read()).hexdigest() != held:
+                        moved = True
+                        break
+            except OSError:
+                pass
+            time.sleep(0.1)
+            waited += 0.1
+        emit("holding", waited_ms=int(waited * 1000), moved=moved,
+             detail=("the file changed under this task, so the evidence it holds is older "
+                     "than the repository" if moved else
+                     "no write arrived; the evidence still describes the file"))
+    elif a.hold > 0:
         emit("holding", seconds=a.hold,
              detail="waiting before the check; another process may move the file now")
         time.sleep(a.hold)

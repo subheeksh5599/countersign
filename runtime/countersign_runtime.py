@@ -800,17 +800,26 @@ def agent_turn(ws, body):
         return {"error": "BOB_API_KEY is not in this runtime's environment; use the "
                          "reference driver or start the runtime with the key loaded"}, 400
 
+    marker = ""
     if body.get("concurrent_writer"):
         rel = plan_path(prompt, ws)
         target = os.path.join(ws, rel)
         stamp = f"// reviewed by the platform team at {time.strftime('%H:%M:%S')}\n"
+        marker = os.path.join(store(ws), f".writer_ready_{sid}")
 
         def interfere():
-            time.sleep(max(0.4, hold / 2.0))
+            # Wait for the agent to say its read has been recorded, then write. Sequencing
+            # on that signal rather than on a delay is what makes the refusal certain
+            # instead of likely: the external write always lands after the evidence was
+            # taken and before the call is checked.
+            deadline = time.time() + max(30.0, hold + 20.0)
+            while time.time() < deadline and not os.path.exists(marker):
+                time.sleep(0.05)
             try:
                 with open(target, "a", encoding="utf-8") as fh:
                     fh.write(stamp)
-                publish("concurrent_writer", path=rel, detail="a second process wrote the file")
+                publish("concurrent_writer", path=rel,
+                        detail="a second process wrote the file after the read was recorded")
             except OSError as e:
                 publish("concurrent_writer_error", path=rel, detail=str(e))
 
@@ -831,6 +840,8 @@ def agent_turn(ws, body):
     else:
         cmd = [sys.executable, os.path.join(HERE, "reference_agent.py"), "--workspace", ws,
                "--session", sid, "--prompt", prompt, "--hold", str(hold)]
+        if marker:
+            cmd += ["--ready-marker", marker, "--wait-for-move", str(max(20.0, hold + 15.0))]
         env = dict(os.environ, COUNTERSIGN_WORKSPACE=ws)
         p = subprocess.run(cmd, capture_output=True, text=True, timeout=300, env=env)
         out, code = (p.stdout or "") + (p.stderr or ""), p.returncode
@@ -1161,6 +1172,11 @@ class Handler(BaseHTTPRequestHandler):
             hello = {"at": now(), "event": "runtime_hello",
                      "repository": workspace(), "session_id": active_session(workspace())}
             self.wfile.write(f"data: {json.dumps(hello)}\n\n".encode())
+            # A page opened after the fact should still see the recent record, not an
+            # empty list until the next thing happens. Replay the tail of the persisted
+            # event log in order, oldest first, then follow live.
+            for ev in reversed(tail_events(workspace(), limit=15)):
+                self.wfile.write(f"data: {json.dumps(ev, default=str)}\n\n".encode())
             self.wfile.flush()
             last = time.time()
             while True:
