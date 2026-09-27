@@ -45,6 +45,10 @@ Reads never mutate anything. The writes, and what they actually do:
 | `POST /api/interceptor/attempt` | runs the gate's `check` mode with the payload the agent sends and keeps the exit code |
 | `POST /api/interceptor/replay` | re-runs the deterministic check for a stored receipt against the repository as it is now |
 | `POST /api/receipts/<id>/verify` | strips `receipt_hash` from the stored file, hashes the rest, compares |
+| `GET /api/sessions` | every manifest in the store with its files, observations, refusals, admissions and receipts |
+| `GET /api/stale` | the persisted staleness record: what moved, when it was first seen, whether it matched again |
+| `POST /api/receipts/replay` | recompute every stored verdict from its own recorded inputs, and recheck the hash and the chain |
+| `POST /api/agent/turn` | one real agent turn: `driver` of `auto`, `reference` or `vendor`, a `prompt`, and `concurrent_writer` to start a second real process inside the window |
 | `POST /api/selftest` | builds a fresh repository from nothing and runs the full sequence in it |
 | `POST /api/demo/start` | the same sequence against the demo repository |
 

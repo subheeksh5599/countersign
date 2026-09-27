@@ -16,6 +16,7 @@ Modes (hook payload on stdin, JSON):
   check           before a state-changing call: admit, or refuse with exit 2
   refresh         re-hash held evidence and update the manifest (real mutation)
   recheck         dry run: compute the verdict, change nothing, write no receipt
+  replay          recompute every stored verdict from its own recorded inputs
   probe           record raw payloads without ever blocking
   export          write one hashed evidence record per task
 
@@ -396,8 +397,123 @@ def persist_verdict(decision, sid, tool, inp, path):
     return r
 
 
+# ------------------------------------------------------------------- replay
+DIGEST_REASONS = {"EVIDENCE_SUPERSEDED", "REVISION_MOVED"}
+NO_PATH_REASONS = {"COMMAND_RESULT_CHANGED", "NO_MANIFEST"}
+MANIFEST_REASONS = {"NO_MANIFEST", "CROSS_TASK_EVIDENCE", "UNVERIFIED_TARGET",
+                    "UNSUPPORTED_SUBTASK_EVIDENCE", "COMMAND_RESULT_CHANGED",
+                    "OUTSIDE_WORKSPACE"}
+HAS_REASONS = {"EVIDENCE_SUPERSEDED", "REVISION_MOVED"}
+
+
+def blob_digest(commit, rel):
+    """The digest of a path as it was committed at that revision, or None if the object
+    is not present locally. This is what makes a receipt checkable from another machine:
+    the repository carries the tree the verdict was reached against."""
+    if not commit:
+        return None
+    try:
+        out = subprocess.run(["git", "cat-file", "-p", f"{commit}:{rel}"], cwd=WS,
+                             capture_output=True)
+    except OSError:
+        return None
+    if out.returncode != 0:
+        return None
+    return digest(out.stdout)
+
+
+def replay_store(as_json=False):
+    """Recompute every stored verdict from the inputs the receipt itself recorded.
+
+    This is the half that can run where the gate ran, and also in CI after a clone: it
+    needs the receipts and the repository, never the machine that produced them. It
+    checks three things.
+
+      1. the stored hash recomputes from the stored content;
+      2. the chain links: each receipt names the hash of the one before it;
+      3. the verdict follows from the digests the receipt recorded. A receipt that says
+         REFUSED for EVIDENCE_SUPERSEDED while its own two digests are equal has been
+         edited, and a receipt that says ADMITTED while its digests differ contradicts
+         itself. Either one fails.
+    """
+    rows = []
+    previous = None
+    failures = 0
+    for name in sorted(os.listdir(RECEIPTS)) if os.path.isdir(RECEIPTS) else []:
+        if not name.endswith(".json"):
+            continue
+        with open(os.path.join(RECEIPTS, name), encoding="utf-8") as fh:
+            r = json.load(fh)
+        row = {"receipt_id": r.get("receipt_id"), "verdict": r.get("verdict"),
+               "reason_code": r.get("reason_code"), "exit_code": r.get("exit_code"),
+               "checks": {}, "notes": []}
+
+        body = {k: v for k, v in r.items() if k != "receipt_hash"}
+        row["checks"]["hash_recomputes"] = digest(canon(body).encode()) == r.get("receipt_hash")
+        row["checks"]["chain_links"] = r.get("previous_receipt_hash") == previous
+        previous = r.get("receipt_hash")
+
+        paths = r.get("affected_paths") or []
+        held = (r.get("evidence_hashes") or {}).get(paths[0]) if paths else None
+        current = (r.get("current_hashes") or {}).get(paths[0]) if paths else None
+        code = r.get("reason_code")
+        verdict = r.get("verdict")
+
+        if not paths:
+            row["checks"]["verdict_follows_from_inputs"] = code in NO_PATH_REASONS or verdict == "ADMITTED"
+        elif held and current:
+            if held != current:
+                row["checks"]["verdict_follows_from_inputs"] = (
+                    verdict == "REFUSED" and code in DIGEST_REASONS)
+                row["notes"].append(f"held {held[:12]} != current {current[:12]}, refusal required")
+            else:
+                row["checks"]["verdict_follows_from_inputs"] = (
+                    verdict == "ADMITTED" or code in MANIFEST_REASONS)
+                row["notes"].append(f"held == current {held[:12]}, a digest refusal would be "
+                                    f"a contradiction")
+        elif held is None and code in HAS_REASONS:
+            row["checks"]["verdict_follows_from_inputs"] = False
+            row["notes"].append("a digest refusal without a recorded digest pair")
+        else:
+            row["checks"]["verdict_follows_from_inputs"] = True
+
+        # information, not a failure: the working tree at verdict time need not have been
+        # committed, so a receipt is bound to a tree only when the blob is there
+        if paths and current:
+            blob = blob_digest(r.get("git_head"), paths[0])
+            row["tree"] = ("bound" if blob == current else
+                           "drifted" if blob else "not in that revision")
+            row["notes"].append(f"{paths[0]} at {str(r.get('git_head'))[:8]}: {row['tree']}")
+
+        row["ok"] = all(row["checks"].values())
+        if not row["ok"]:
+            failures += 1
+        rows.append(row)
+
+    summary = {"receipts": len(rows), "failures": failures,
+               "chain_head": previous, "ok": failures == 0}
+    if as_json:
+        print(json.dumps({"summary": summary, "receipts": rows}, indent=2, sort_keys=True))
+    else:
+        for row in rows:
+            mark = "PASS" if row["ok"] else "FAIL"
+            checks = " ".join(f"{k}={'yes' if v else 'NO'}" for k, v in row["checks"].items())
+            print(f"{mark}  {row['receipt_id']}  {row['verdict']:<8} {row['reason_code']:<26} "
+                  f"{checks}")
+            for n in row["notes"]:
+                print(f"        {n}")
+        print(f"\n{len(rows)} receipts, {failures} failed. chain head {str(previous)[:12]}")
+    return 2 if failures else 0
+
+
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
+    if mode == "replay":
+        if not WS:
+            bind_workspace(os.environ.get("COUNTERSIGN_WORKSPACE") or os.getcwd())
+        if STORE is None:
+            bind_workspace(WS)
+        return replay_store(as_json="--json" in sys.argv[2:])
     try:
         payload = json.load(sys.stdin)
     except json.JSONDecodeError as e:

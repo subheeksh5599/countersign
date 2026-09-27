@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Action, Digest, Empty, Field, JsonBlock, Panel, RuntimeBanner, StatusPill, Verdict } from "@/components/console";
 import { useApi, useEvents, dateTime, dig, humanAge, ms, stamp } from "@/lib/runtime";
+import { AgentTurn, StalePanel } from "@/components/ops";
 
 type Counts = { total: number; stale: number; current: number; deleted: number };
 type Status = {
@@ -108,6 +109,12 @@ export default function ProtectPage() {
 
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <div className="space-y-3">
+          {/* one real agent turn, driven from here */}
+          <AgentTurn onDone={refreshAll} />
+
+          {/* what moved, as recorded when it moved */}
+          <StalePanel />
+
           {/* held vs current */}
           <Panel
             title="held evidence vs current repository"

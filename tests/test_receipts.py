@@ -193,6 +193,59 @@ case("resuming a session does not erase the evidence it holds",
      "src/config.ts" in m.get("files", {}) and m.get("resumed_at"),
      json.dumps(list(m.get("files", {}))))
 
+# 8 replay: every stored verdict must follow from the digests the receipt itself recorded
+ws = ws_new()
+run(ws, "session-start", {"session_id": "s8", "cwd": ws})
+run(ws, "record", {"session_id": "s8", "cwd": ws, "tool_name": "read_file",
+                   "tool_input": {"path": "src/config.ts"}})
+open(os.path.join(ws, "src", "config.ts"), "w").write("export const RETRY_LIMIT = 11\n")
+run(ws, "check", {"session_id": "s8", "cwd": ws, "tool_name": "write_file",
+                  "tool_input": {"path": "src/config.ts", "content": "x"}})
+run(ws, "record", {"session_id": "s8", "cwd": ws, "tool_name": "read_file",
+                   "tool_input": {"path": "src/config.ts"}})
+rc, out = run(ws, "check", {"session_id": "s8", "cwd": ws, "tool_name": "write_file",
+                            "tool_input": {"path": "src/config.ts", "content": "y"}})
+rc, out = run(ws, "replay", {})
+case("an intact store replays: every verdict follows from its own recorded inputs",
+     rc == 0 and "0 failed" in out and "hash_recomputes=yes" in out
+     and "chain_links=yes" in out and "verdict_follows_from_inputs=yes" in out,
+     out[-400:])
+
+# 9 a forged verdict is caught, on the hash and on the contradiction with its own digests
+ws = ws_new()
+run(ws, "session-start", {"session_id": "s9", "cwd": ws})
+run(ws, "record", {"session_id": "s9", "cwd": ws, "tool_name": "read_file",
+                   "tool_input": {"path": "src/config.ts"}})
+open(os.path.join(ws, "src", "config.ts"), "w").write("export const RETRY_LIMIT = 13\n")
+run(ws, "check", {"session_id": "s9", "cwd": ws, "tool_name": "write_file",
+                  "tool_input": {"path": "src/config.ts", "content": "x"}})
+f = os.path.join(ws, ".countersign", "receipts",
+                 sorted(os.listdir(os.path.join(ws, ".countersign", "receipts")))[0])
+rec = json.load(open(f))
+rec["verdict"], rec["exit_code"] = "ADMITTED", 0        # forge an admission on a refusal
+json.dump(rec, open(f, "w"), indent=2, sort_keys=True)
+rc, out = run(ws, "replay", {})
+case("a forged verdict fails replay, and the failure names both causes",
+     rc == 2 and "hash_recomputes=NO" in out and "verdict_follows_from_inputs=NO" in out
+     and "refusal required" in out,
+     out[-400:])
+
+# 10 replay needs the receipts and the repository only, never the machine that ran the gate
+ws = ws_new()
+run(ws, "session-start", {"session_id": "s10", "cwd": ws})
+run(ws, "record", {"session_id": "s10", "cwd": ws, "tool_name": "read_file",
+                   "tool_input": {"path": "src/config.ts"}})
+open(os.path.join(ws, "src", "config.ts"), "w").write("export const RETRY_LIMIT = 17\n")
+run(ws, "check", {"session_id": "s10", "cwd": ws, "tool_name": "write_file",
+                  "tool_input": {"path": "src/config.ts", "content": "x"}})
+other = ws_new()                                  # a different repository, a different machine
+shutil.copytree(os.path.join(ws, ".countersign"), os.path.join(other, ".countersign"),
+                ignore=shutil.ignore_patterns("countersign.py"))
+rc, out = run(other, "replay", {})
+case("a store replays where the gate never ran: 1 receipt, 0 failed",
+     rc == 0 and "1 receipts, 0 failed" in out,
+     out[-300:])
+
 for w in [d for d in os.listdir(tempfile.gettempdir()) if d.startswith("csign_receipts_")]:
     shutil.rmtree(os.path.join(tempfile.gettempdir(), w), ignore_errors=True)
 

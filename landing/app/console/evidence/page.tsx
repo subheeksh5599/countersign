@@ -16,20 +16,40 @@ type Session = {
   implicit?: boolean; evidence?: { total: number; stale: number; current: number; deleted: number };
 };
 
+type SessionRow = {
+  session_id: string;
+  opened_at?: string | null;
+  files?: string[];
+  file_count?: number;
+  observations?: number;
+  refusals?: number;
+  admissions?: number;
+  receipts?: number;
+  active?: boolean;
+  implicit?: boolean;
+};
+
 const FILTERS = ["all", "current", "stale", "deleted"] as const;
 
 export default function EvidencePage() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
   const [open, setOpen] = useState<string | null>(null);
+  const [pick, setPick] = useState<string | null>(null);
   const session = useApi<Session>("/api/session");
+  const sessions = useApi<{ rows: SessionRow[]; count: number; active: string | null }>(
+    "/api/sessions"
+  );
   const ev = useApi<{ rows: EvRow[]; counts: Record<string, number>; session_id: string | null }>(
-    `/api/evidence?filter=${filter}`
+    `/api/evidence?filter=${filter}${pick ? `&session=${pick}` : ""}`
   );
 
   const reload = () => {
     ev.reload();
     session.reload();
+    sessions.reload();
   };
+  const shown =
+    (sessions.data?.rows || []).find((s) => s.session_id === pick) || null;
   const rows = ev.data?.rows || [];
   const selected = rows.find((r) => r.path === open) || null;
 
@@ -37,14 +57,105 @@ export default function EvidencePage() {
     <div className="space-y-3">
       <RuntimeBanner error={ev.error} />
 
+      {/* every manifest this repository has, not only the newest one */}
       <Panel
-        title="current session"
+        title="sessions in this store"
         right={
-          <Action label="refresh manifest" path="/api/evidence/refresh" onDone={reload} />
+          <span className="font-mono text-caption uppercase tracking-[0.14em] text-graphite">
+            {sessions.data?.count ?? 0} manifests
+          </span>
+        }
+      >
+        {!sessions.data?.count ? (
+          <Empty>No manifest has been opened in this repository yet.</Empty>
+        ) : (
+          <div className="overflow-hidden rounded-window border border-gridline">
+            <table className="w-full text-left">
+              <thead className="bg-vellum">
+                <tr className="font-mono text-[11px] uppercase tracking-[0.12em] text-slate">
+                  <th className="px-2 py-[6px]">session</th>
+                  <th className="px-2 py-[6px]">opened</th>
+                  <th className="px-2 py-[6px]">files</th>
+                  <th className="px-2 py-[6px]">observations</th>
+                  <th className="px-2 py-[6px]">refused</th>
+                  <th className="px-2 py-[6px]">allowed</th>
+                  <th className="px-2 py-[6px]">receipts</th>
+                  <th className="px-2 py-[6px]" />
+                </tr>
+              </thead>
+              <tbody>
+                {(sessions.data?.rows || []).map((s) => (
+                  <tr key={s.session_id} className="border-t border-gridline/70">
+                    <td className="px-2 py-[6px] font-mono text-[11.5px] text-ink">
+                      {s.session_id}
+                      {s.active ? <span className="ml-2 text-ember-text">active</span> : null}
+                    </td>
+                    <td className="px-2 py-[6px] font-mono text-[12px] text-graphite">
+                      {dateTime(s.opened_at)}
+                    </td>
+                    <td className="px-2 py-[6px] font-mono text-[12px] text-graphite">
+                      {s.file_count}
+                    </td>
+                    <td className="px-2 py-[6px] font-mono text-[12px] text-graphite">
+                      {s.observations}
+                    </td>
+                    <td className="px-2 py-[6px] font-mono text-[12px] text-ember-text">
+                      {s.refusals}
+                    </td>
+                    <td className="px-2 py-[6px] font-mono text-[12px] text-graphite">
+                      {s.admissions}
+                    </td>
+                    <td className="px-2 py-[6px] font-mono text-[12px] text-graphite">
+                      {s.receipts}
+                    </td>
+                    <td className="px-2 py-[6px] text-right">
+                      <button
+                        type="button"
+                        onClick={() => setPick(pick === s.session_id ? null : s.session_id)}
+                        className={`rounded-pill border px-2 py-[3px] font-mono text-[11px] uppercase tracking-[0.1em] ${
+                          pick === s.session_id
+                            ? "border-ink bg-white text-ink"
+                            : "border-gridline bg-white text-slate"
+                        }`}
+                      >
+                        {pick === s.session_id ? "shown" : "inspect"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {pick ? (
+          <div className="mt-3 flex items-center gap-3 text-body text-graphite">
+            <span className="font-mono text-[12px]">
+              inspecting {pick} ({shown?.file_count ?? 0} files, {shown?.receipts ?? 0} receipts)
+            </span>
+            <button
+              type="button"
+              onClick={() => setPick(null)}
+              className="rounded-pill border border-gridline bg-white px-2 py-[3px] font-mono text-[11px] uppercase tracking-[0.1em] text-slate"
+            >
+              back to the active session
+            </button>
+          </div>
+        ) : null}
+      </Panel>
+
+      <Panel
+        title={pick ? "session inspected" : "current session"}
+        right={
+          <Action
+            label="refresh manifest"
+            path="/api/evidence/refresh"
+            body={pick ? { session: pick } : {}}
+            onDone={reload}
+          />
         }
       >
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-          <Field label="session" value={<span className="font-mono text-[12px]">{session.data?.session_id || "\u2014"}</span>} />
+          <Field label="session" value={<span className="font-mono text-[12px]">{pick || session.data?.session_id || "\u2014"}</span>} />
           <Field label="agent" value={<span className="font-mono text-[12.5px]">{session.data?.agent || "\u2014"}</span>} />
           <Field label="started" value={<span className="font-mono text-[12px]">{dateTime(session.data?.started)}</span>} />
           <Field label="commit" value={<Digest h={session.data?.commit} />} />

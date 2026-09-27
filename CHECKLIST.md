@@ -4,8 +4,8 @@ Legend: [x] done and verified by a real run · [~] built but not yet exercised e
 end · [ ] outstanding · (axis) the judging axis it moves · → the artifact that proves it.
 
 Status line: public at github.com/subheeksh5599/countersign, pages published on GitHub
-Pages, 528 tests passing (15 behaviour cases + 500-case matrix + 13 receipt, chain,
-redaction and policy cases), the 17 step fresh machine acceptance run passing against a
+Pages, 531 tests passing (15 behaviour cases + 500-case matrix + 16 receipt, chain,
+redaction, policy and replay cases), the 21 step fresh machine acceptance run passing against a
 live runtime, one live refusal and one live admission recorded from a real session, two
 further scenes recorded verbatim, and a local control plane (runtime plus a five page
 console that holds no sample data) driving the same gate command the agent's hook runs.
@@ -117,7 +117,18 @@ console that holds no sample data) driving the same gate command the agent's hoo
       unrecognised tool or command → `tests/test_receipts.py`
 - [x] Real recovery: refresh re-hashes the held files and rewrites the manifest, and the
       retried call is then admitted with a second receipt
-- [x] 17 step acceptance run against a live runtime, on a repository it creates from
+- [x] the console can drive one real agent turn itself: a bundled deterministic reference
+      agent, or the vendor CLI when its key is in the runtime environment, with a second
+      real process writing the file inside the window (verified from the browser: exit 2,
+      receipt written, file left as the other process wrote it)
+- [x] staleness persisted as a record with a time on it (`.countersign/stale.jsonl`),
+      not recomputed per request
+- [x] every manifest in the store is listed and can be inspected, not only the newest
+- [x] `countersign replay` recomputes every stored verdict from the inputs the receipt
+      itself recorded; a forged verdict fails it (16/16 in `tests/test_receipts.py`)
+- [x] the same replay runs in CI on a clone, with a forgery asserted to fail
+      (`.github/workflows/replay.yml`, `docs/evidence-store/ci-bundle/`)
+- [x] 21 step acceptance run against a live runtime, on a repository it creates from
       nothing → `scripts/acceptance.py`
 - [x] One command startup → `run.sh`
 - [x] Static snapshot console retired: the product console reads the runtime, and reports
@@ -126,7 +137,7 @@ console that holds no sample data) driving the same gate command the agent's hoo
 ## G. Where the marks come from
 - Application: refusal produced by the runtime's own hook on a real session, from its
   own payloads, with its own task id in the receipt; a local control plane over the real
-  store; public repo; 528 tests and a 17 step acceptance run.
+  store; public repo; 531 tests and a 21 step acceptance run.
   → sections A, B, C, F.
 - Presentation: the refusal, the recovery, the receipt chain and a console built from
   live state only. → sections B, C, F, and the open item in D.

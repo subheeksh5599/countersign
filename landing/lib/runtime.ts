@@ -55,25 +55,8 @@ export function useApi<T>(path: string | null, deps: unknown[] = []): ApiState<T
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, tick, ...deps]);
 
-  // Live updates: the runtime pushes events, the page refetches. No polling timer.
-  useEffect(() => {
-    let closed = false;
-    let es: EventSource | null = null;
-    const open = () => {
-      if (closed) return;
-      es = new EventSource(`${API}/api/stream`);
-      es.onmessage = () => load();
-      es.onerror = () => {
-        es?.close();
-        if (!closed) setTimeout(open, 2000);
-      };
-    };
-    open();
-    return () => {
-      closed = true;
-      es?.close();
-    };
-  }, [load]);
+  // Live updates: the runtime pushes an event, every mounted hook refetches.
+  useEffect(() => onRuntimeEvent(load), [load]);
 
   return { data, error, loading, reload: () => setTick((t) => t + 1) };
 }
@@ -84,20 +67,52 @@ export type RuntimeEvent = {
   [k: string]: unknown;
 };
 
+// One stream for the whole app. A browser allows only a handful of connections per
+// origin, and an EventSource per hook exhausts them: with the stream held by itself the
+// page can still POST. So the connection is a module singleton and every hook subscribes
+// to it.
+const listeners = new Set<(ev: RuntimeEvent) => void>();
+let stream: EventSource | null = null;
+let retry: ReturnType<typeof setTimeout> | null = null;
+
+function openStream() {
+  if (stream) return;
+  stream = new EventSource(`${API}/api/stream`);
+  stream.onmessage = (m) => {
+    let ev: RuntimeEvent;
+    try {
+      ev = JSON.parse(m.data) as RuntimeEvent;
+    } catch {
+      return; // a keepalive comment, not an event
+    }
+    listeners.forEach((fn) => fn(ev));
+  };
+  stream.onerror = () => {
+    stream?.close();
+    stream = null;
+    if (retry) clearTimeout(retry);
+    retry = setTimeout(openStream, 2000);
+  };
+}
+
+function onRuntimeEvent(fn: (ev: RuntimeEvent) => void) {
+  const wrapped = () => fn({ event: "changed" });
+  listeners.add(wrapped);
+  openStream();
+  return () => {
+    listeners.delete(wrapped);
+  };
+}
+
 export function useEvents(limit = 120) {
   const [events, setEvents] = useState<RuntimeEvent[]>([]);
-  useEffect(() => {
-    const es = new EventSource(`${API}/api/stream`);
-    es.onmessage = (m) => {
-      try {
-        const ev = JSON.parse(m.data);
+  useEffect(
+    () =>
+      onRuntimeEvent((ev) => {
         setEvents((prev) => [ev, ...prev].slice(0, limit));
-      } catch {
-        /* a keepalive comment, not an event */
-      }
-    };
-    return () => es.close();
-  }, [limit]);
+      }),
+    [limit]
+  );
   return events;
 }
 

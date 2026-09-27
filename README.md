@@ -1,8 +1,8 @@
 # Countersign
 
-**Live status:** gate, runtime and console implemented and exercised. 528 tests passing
-(500 case matrix, 15 behaviour cases, 13 receipt and policy cases), the 17 step fresh
-machine acceptance run passing against a live runtime, real refusals recorded from a
+**Live status:** gate, runtime and console implemented and exercised. 531 tests passing
+(500 case matrix, 15 behaviour cases, 16 receipt, chain, redaction, policy and replay
+cases), the 21 step fresh machine acceptance run passing against a live runtime, real refusals recorded from a
 real agent session, receipts chained and verifiable, one decision measured at 308 ms
 against a 200 observation manifest and a 10 s default hook timeout. Not yet wired into
 a licensed desktop install.
@@ -143,10 +143,10 @@ subscribing to its server sent event stream:
 
 | Page | What it shows |
 |---|---|
-| `protect` | protection state, repository, branch, HEAD, session, last verdict, last receipt, live latency; held evidence against current repository; stale evidence panel with the real recovery action; latest intercepted call; latest receipt; security state; operator actions; run self-test |
-| `evidence` | the session's evidence set with filters, per item held digest, current digest, git revision, last read, last verified, status, and per item re-check and refresh |
+| `protect` | protection state, repository, branch, HEAD, session, last verdict, last receipt, live latency; **run one real agent turn** with a driver and an optional second writer; the staleness the watcher recorded, with the time it was first seen; held evidence against current repository; the real recovery action; latest intercepted call; latest receipt; security state; operator actions; run self-test |
+| `evidence` | every manifest in the store, not only the newest, each inspectable; the selected session's evidence set with filters, per item held digest, current digest, git revision, last read, last verified, status, and per item re-check and refresh |
 | `interceptor` | every intercepted call with classification, verdict, reason, exit code, latency and receipt; detail view with the redacted arguments and a replay of the deterministic check |
-| `receipts` | the receipt log, the chain and a detail view with copy, download and verify |
+| `receipts` | the receipt log, the chain, a detail view with copy, download and verify, and **replay every stored verdict from its own recorded inputs** |
 | `self-test` | the whole mechanism run against a fresh temporary repository, with the real exit codes, both receipts and the file content on disk afterwards |
 
 Repository controls (connect, protect, stop, refresh git state, create demo repository,
@@ -154,11 +154,20 @@ start demo) and operator actions (start session, record read, attempt edit) all 
 real operations: they install or remove real hook entries, invoke the real gate command
 with the payload the agent sends, and re-hash real files.
 
+"Run agent turn" is the one to watch. It runs a real agent against the protected
+repository: the bundled reference agent (`runtime/reference_agent.py`, deterministic, no
+model and no key) or the vendor CLI when it is on this machine's PATH with its key in the
+runtime's environment. With the second writer ticked, a real second process rewrites the
+file inside the window between the agent's read and its attempt, so the call comes back
+exit 2 with a receipt written and the file left exactly as the other process wrote it. The
+driver that ran is named in the result; nothing is claimed about a driver that was not
+available.
+
 ## The runtime API
 
-`GET /api/status`, `/api/repo`, `/api/session`, `/api/evidence`, `/api/interceptor`,
-`/api/receipts`, `/api/receipts/<id>`, `/api/receipts/<id>/download`, `/api/security`,
-`/api/stream` (SSE).
+`GET /api/status`, `/api/repo`, `/api/session`, `/api/sessions`, `/api/evidence`,
+`/api/stale`, `/api/interceptor`, `/api/receipts`, `/api/receipts/<id>`,
+`/api/receipts/<id>/download`, `/api/security`, `/api/stream` (SSE).
 `POST /api/repo/connect`, `/api/repo/demo`, `/api/repo/protect`, `/api/repo/stop`,
 `/api/repo/refresh`, `/api/session/start`, `/api/evidence/read`, `/api/evidence/refresh`,
 `/api/evidence/recheck`, `/api/interceptor/attempt`, `/api/interceptor/replay`,
@@ -192,8 +201,9 @@ observed. Ports: `COUNTERSIGN_PORT` (4319), `PORT` for the console (4311).
 ```sh
 python3 tests/test_gate.py         # 15 behaviour cases
 python3 tests/test_matrix.py -j 6  # 500 case matrix across families of payloads and states
-python3 tests/test_receipts.py     # 13 cases: receipts, chain, redaction, policy, recovery
-python3 scripts/acceptance.py      # the 17 step fresh machine run, against a live runtime
+python3 tests/test_receipts.py     # 16 cases: receipts, chain, redaction, policy, replay
+python3 scripts/acceptance.py      # the 21 step fresh machine run, against a live runtime
+python3 countersign.py replay      # recompute every stored verdict from its own inputs
 ```
 
 Each test builds a real git workspace, writes real files, and runs the gate as a subprocess,
@@ -230,8 +240,10 @@ install.sh                  installs the gate and merges the hook block
 landing/                    the Next.js console and product site
 tests/test_gate.py          15 behaviour cases
 tests/test_matrix.py        500 case matrix
-tests/test_receipts.py      13 receipt, chain, redaction and policy cases
-scripts/acceptance.py       the 17 step fresh machine acceptance run
+tests/test_receipts.py      16 receipt, chain, redaction, policy and replay cases
+scripts/acceptance.py       the 21 step fresh machine acceptance run
+scripts/forge_a_verdict.py  forge a verdict, used by CI to prove the replay has teeth
+.github/workflows/replay.yml  replay the committed bundle, then assert a forgery fails
 scripts/acceptance_gate.sh  the same mechanism at gate level, no runtime
 docs/LIVE_RUN.md            a refusal recorded from a real agent session
 docs/MULTI_DEV_RUN.md       admitted before fetch, refused after

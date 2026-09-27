@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { Action, Digest, Empty, Field, JsonBlock, Panel, RuntimeBanner, Verdict } from "@/components/console";
 import { API, useApi, dateTime, ms } from "@/lib/runtime";
+import { ReplayPanel } from "@/components/ops";
 
 type ReceiptRow = {
   receipt_id: string; receipt_hash: string; timestamp: string; session_id: string;
@@ -91,6 +92,8 @@ export default function ReceiptsPage() {
           </table>
         )}
       </Panel>
+
+      <ReplayPanel />
 
       {chain && rows.length > 0 ? (
         <Panel title="receipt chain">

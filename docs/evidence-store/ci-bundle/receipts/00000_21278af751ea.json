@@ -1,0 +1,43 @@
+{
+  "affected_paths": [
+    "src/config.ts"
+  ],
+  "branch": "master",
+  "classification_reason": "tool apply_diff is classified state-changing",
+  "current_hashes": {
+    "src/config.ts": "9429601593bdfd8921b8c6f07921e861036812a46d6c992a59d159c92df3221a"
+  },
+  "evidence_hashes": {
+    "src/config.ts": "b29e97750e863281579944307fd1e95a6ac8788b62b97e1b4bc98453f16d8e2f"
+  },
+  "exit_code": 2,
+  "git_head": "b31ea9e131722a59ffa67ee6d279cd8702de8414",
+  "previous_receipt_hash": null,
+  "reason_code": "EVIDENCE_SUPERSEDED",
+  "reason_codes": [
+    "EVIDENCE_SUPERSEDED"
+  ],
+  "reason_detail": [
+    {
+      "code": "EVIDENCE_SUPERSEDED",
+      "current": "9429601593bdfd8921b8c6f07921e861036812a46d6c992a59d159c92df3221a",
+      "held": "b29e97750e863281579944307fd1e95a6ac8788b62b97e1b4bc98453f16d8e2f",
+      "why": "the file changed after this task observed it"
+    }
+  ],
+  "receipt_hash": "21278af751ea684dd367673ef1a77544b8270ac93eac4b502418ddd851d89c17",
+  "receipt_id": "rcpt_00000_e17857c25e96",
+  "repository": "/tmp/csign_acceptance_repo",
+  "runtime_latency_ms": 30,
+  "seq": 0,
+  "session_id": "session_1790496956",
+  "timestamp": "2026-09-27T08:15:57Z",
+  "tool_arguments": {
+    "diff": "-export const RETRY_LIMIT = 99\n+export const RETRY_LIMIT = 5\n",
+    "path": "src/config.ts"
+  },
+  "tool_arguments_hash": "e6ee2f2d6b23647d511a6a78315781130b795a1876b7cbe604bd9ebc649017d6",
+  "tool_classification": "state_changing",
+  "tool_name": "apply_diff",
+  "verdict": "REFUSED"
+}

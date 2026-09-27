@@ -206,6 +206,57 @@ def main():
           f"run 2 exit {st_test.get('run_2', {}).get('exit_code')}, {len(steps)} steps on "
           f"{st_test.get('repository')}")
 
+    # 18
+    call(a.api, "/api/repo/connect", {"path": ws})   # step 17 moved the runtime elsewhere
+    code, sess = call(a.api, "/api/sessions")
+    mine = [s for s in sess.get("rows", []) if s.get("session_id") == sid]
+    check("18. every manifest in the store is listed, not only the newest",
+          code == 200 and sess.get("count", 0) >= 1 and bool(mine) and mine[0].get("refusals", 0) >= 1,
+          f"{sess.get('count')} manifests; this session refused {mine[0].get('refusals') if mine else '-'} "
+          f"and allowed {mine[0].get('admissions') if mine else '-'}")
+
+    # 19
+    # a real external write, right now, then wait for the watcher to record it. The
+    # waiting is the point: the record is a fact with a timestamp that survives a reload.
+    with open(os.path.join(ws, "src", "config.ts"), "a", encoding="utf-8") as fh:
+        fh.write("// moved by another process during the acceptance run\n")
+    moved, waited = [], 0
+    while waited < 20:
+        code, stale = call(a.api, "/api/stale")
+        rows = stale.get("rows", [])
+        moved = [r for r in rows if r.get("path") == "src/config.ts" and not r.get("resolved_at")]
+        if moved:
+            break
+        time.sleep(1)
+        waited += 1
+    check("19. a move the watcher saw is recorded in the store with a time on it",
+          code == 200 and bool(moved) and bool(moved[0].get("detected_at")),
+          f"recorded after {waited}s: {len(moved)} open transition(s) for src/config.ts, "
+          f"first seen {moved[0].get('detected_at') if moved else '-'} status "
+          f"{moved[0].get('status') if moved else '-'}")
+
+    # 20
+    call(a.api, "/api/repo/protect", {})
+    code, turn = call(a.api, "/api/agent/turn",
+                      {"driver": "reference", "prompt": "set RETRY_LIMIT to 9 in src/config.ts",
+                       "concurrent_writer": True}, timeout=180)
+    refused = [v for v in turn.get("verdicts", []) if v.get("verdict") == "REFUSED"]
+    check("20. one agent turn against the protected repository is refused by the gate",
+          turn.get("exit_code") == 2 and turn.get("refused") and refused,
+          f"driver {turn.get('driver')}, agent exit {turn.get('exit_code')}, "
+          f"{turn.get('receipts_written')} receipt(s), {
+              refused[0].get('reason_code') if refused else 'no refusal'} "
+          f"in {turn.get('duration_ms')} ms")
+
+    # 21
+    code, rep = call(a.api, "/api/receipts/replay", {}, timeout=180)
+    s = rep.get("summary", {})
+    checks_ok = all(all((r.get("checks") or {}).values()) for r in rep.get("receipts", []))
+    check("21. every stored verdict is re-derived from its own recorded inputs",
+          code == 200 and s.get("failures") == 0 and s.get("receipts", 0) >= 2 and checks_ok,
+          f"{s.get('receipts')} receipts replayed, {s.get('failures')} failed, exit {rep.get('exit_code')}, "
+          f"chain head {str(s.get('chain_head'))[:12]}")
+
     print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
     if FAIL:
         print("failed steps: " + ", ".join(FAIL))

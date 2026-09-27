@@ -22,6 +22,11 @@ Endpoints
   POST /api/evidence/refresh {path}    real re-hash and manifest update
   GET  /api/interceptor?filter=        intercepted tool calls with verdicts
   POST /api/interceptor/replay         rerun the deterministic check for a receipt
+  GET  /api/sessions                   every manifest in the store, not only the active one
+  GET  /api/stale                      persisted staleness: what moved, since when
+  POST /api/receipts/replay            recompute every stored verdict from its own inputs
+  POST /api/agent/turn  {driver,prompt} run one real agent turn: vendor CLI or the bundled
+                                       reference agent, optionally with a second real writer
   GET  /api/receipts                   receipt index
   GET  /api/receipts/<id>              full receipt JSON
   POST /api/receipts/<id>/verify       recompute the hash locally
@@ -33,6 +38,7 @@ Endpoints
 
 Stdlib only. No model is consulted for any verdict.
 """
+import datetime
 import glob
 import hashlib
 import json
@@ -66,6 +72,12 @@ event_offset = {}        # ws -> byte offset into events.jsonl
 
 
 # ------------------------------------------------------------------ small utils
+def log(msg):
+    """One line per operation in the server log. The console shows results; the log shows
+    the runtime's own view of what it did."""
+    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {msg}", file=sys.stderr, flush=True)
+
+
 def now():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
@@ -272,6 +284,61 @@ def publish(kind, **kw):
     return ev
 
 
+# ------------------------------------------------- persisted staleness record
+def stale_log(ws):
+    return os.path.join(store(ws), "stale.jsonl")
+
+
+def write_stale(ws, **kw):
+    """Append one record to the workspace store. Staleness is a fact with a time on it,
+    so it is written where the gate writes and survives a reload, instead of being
+    recomputed on every request."""
+    rec = {"at": now(), **kw}
+    try:
+        os.makedirs(store(ws), exist_ok=True)
+        with open(stale_log(ws), "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(rec, sort_keys=True) + "\n")
+    except OSError:
+        return rec
+    return rec
+
+
+def stale_state(ws):
+    """Fold the append-only log: what is stale now, since when, and what moved."""
+    if not ws or not os.path.exists(stale_log(ws)):
+        return {"rows": [], "stale": 0, "resolved": 0}
+    latest, first = {}, {}
+    try:
+        with open(stale_log(ws), encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                r = json.loads(line)
+                key = (r.get("session_id"), r.get("path"))
+                latest[key] = r
+                if r.get("status") in ("STALE", "DELETED") and key not in first:
+                    first[key] = r
+    except (OSError, json.JSONDecodeError):
+        return {"rows": [], "stale": 0, "resolved": 0}
+    rows = []
+    for key, r in latest.items():
+        sid, rel = key
+        open_row = r.get("status") in ("STALE", "DELETED")
+        start = (first.get(key) or r).get("at")
+        rows.append({"session_id": sid, "path": rel, "status": r.get("status"),
+                     "held": r.get("held"), "current": r.get("current"),
+                     "detected_at": start, "last_change_at": r.get("at"),
+                     "resolved_at": None if open_row else r.get("at"),
+                     "seconds_open": (None if not open_row else
+                                      max(0, int(time.time() - (
+                                          datetime.datetime.fromisoformat(start).timestamp()
+                                          if start else time.time()))))})
+    rows.sort(key=lambda r: (r["resolved_at"] is not None, r["path"]))
+    return {"rows": rows, "stale": sum(1 for r in rows if r["resolved_at"] is None),
+            "resolved": sum(1 for r in rows if r["resolved_at"] is not None)}
+
+
 # ------------------------------------------------------------------- watcher
 MUTATION_EXTS = (".ts", ".js", ".py", ".json", ".md", ".sh", ".yml", ".yaml", ".tsx",
                  ".jsx", ".toml", ".go", ".rs", ".sol", ".css", ".html")
@@ -314,15 +381,25 @@ def watcher():
                         if cur is None and rec.get("digest"):
                             if last != "DELETED":
                                 seen_files[key] = "DELETED"
+                                write_stale(ws, path=rel, session_id=sid, status="DELETED",
+                                            held=rec.get("digest"), current=None)
                                 publish("filesystem_changed", path=rel, status="DELETED",
                                         held=rec.get("digest"), current=None,
                                         session_id=sid, detail="file no longer exists")
                         elif cur and cur != rec.get("digest") and last != cur:
                             seen_files[key] = cur
+                            write_stale(ws, path=rel, session_id=sid, status="STALE",
+                                        held=rec.get("digest"), current=cur)
                             publish("filesystem_changed", path=rel, status="STALE",
                                     held=rec.get("digest"), current=cur, session_id=sid,
                                     detail="held evidence no longer matches the repository")
                         elif cur == rec.get("digest"):
+                            if seen_files.get(key) not in (None, cur):
+                                write_stale(ws, path=rel, session_id=sid, status="CURRENT",
+                                            held=rec.get("digest"), current=cur)
+                                publish("filesystem_changed", path=rel, status="CURRENT",
+                                        held=rec.get("digest"), current=cur, session_id=sid,
+                                        detail="the held evidence matches the repository again")
                             seen_files[key] = cur
                 # 3. HEAD moving
                 h = git(ws, "rev-parse", "HEAD")
@@ -650,9 +727,166 @@ def repo_payload(ws):
     }
 
 
+# ------------------------------------------------------- sessions and the turn
+def sessions_payload(ws):
+    """Every manifest in the store, not only the active one. A repository accumulates one
+    manifest per task, and the console has to be able to look at any of them."""
+    if not ws:
+        return {"rows": [], "count": 0}
+    rs = receipts(ws)
+    events = tail_events(ws)
+    rows = []
+    for t in tasks(ws):
+        sid = t.get("task")
+        mine = [r for r in rs if r.get("session_id") == sid]
+        rows.append({
+            "session_id": sid, "opened_at": t.get("opened_at"),
+            "updated_at": t.get("updated_at"), "git_head": t.get("git_head"),
+            "implicit": t.get("implicit"), "resumed": t.get("resumed", 0),
+            "files": sorted((t.get("files") or {}).keys()),
+            "file_count": len((t.get("files") or {})),
+            "observations": len([e for e in events if e.get("event") == "evidence_recorded"
+                                 and e.get("task") == sid]),
+            "refusals": len([r for r in mine if r.get("verdict") == "REFUSED"]),
+            "admissions": len([r for r in mine if r.get("verdict") == "ADMITTED"]),
+            "receipts": len(mine),
+            "active": sid == active_session(ws),
+        })
+    rows.sort(key=lambda r: (r["opened_at"] or ""), reverse=True)
+    return {"rows": rows, "count": len(rows), "active": active_session(ws)}
+
+
+def plan_path(prompt, ws):
+    """The path the reference agent will pick, so a concurrent writer can move exactly
+    that file. Mirrors the agent's rule; if the two ever disagree the writer simply edits
+    a file the turn does not touch, which is visible and harmless."""
+    m = re.search(r"[\w./-]+\.(ts|tsx|js|jsx|py|json|md|sh|yml|yaml|toml|go|rs|sol)", prompt or "")
+    rel = (m.group(0) if m else "src/config.ts").lstrip("./")
+    if os.path.exists(os.path.join(ws, rel)):
+        return rel
+    for cand in ("src/config.ts", "config.ts", "src/index.ts", "package.json"):
+        if os.path.exists(os.path.join(ws, cand)):
+            return cand
+    return rel
+
+
+def agent_turn(ws, body):
+    """Run one real agent turn against the protected workspace.
+
+    Two drivers, both real, neither mocked:
+      vendor     the vendor CLI on PATH, if its key is in this runtime's environment
+      reference  the bundled deterministic agent, which makes the same tool calls
+                 through the same gate command, with no key and no spend
+    `concurrent_writer` starts a second real process that rewrites the file between the
+    agent's read and its attempt, which is how a stale evidence refusal is produced.
+    """
+    driver = (body.get("driver") or "auto").lower()
+    prompt = (body.get("prompt") or "").strip()
+    if not ws:
+        return {"error": "no repository connected"}, 400
+    if not prompt:
+        return {"error": "a prompt is required"}, 400
+    if not hook_installed(ws):
+        return {"error": "the repository is not protected; protect it first"}, 400
+    sid = body.get("session") or f"turn_{int(time.time())}"
+    writer = None
+    hold = float(body.get("hold") or 2.5)
+
+    if driver == "auto":
+        driver = "vendor" if (shutil.which("bob") and os.environ.get("BOB_API_KEY")) else "reference"
+    if driver == "vendor" and not shutil.which("bob"):
+        return {"error": "the vendor CLI is not on PATH in this runtime's environment"}, 400
+    if driver == "vendor" and not os.environ.get("BOB_API_KEY"):
+        return {"error": "BOB_API_KEY is not in this runtime's environment; use the "
+                         "reference driver or start the runtime with the key loaded"}, 400
+
+    if body.get("concurrent_writer"):
+        rel = plan_path(prompt, ws)
+        target = os.path.join(ws, rel)
+        stamp = f"// reviewed by the platform team at {time.strftime('%H:%M:%S')}\n"
+
+        def interfere():
+            time.sleep(max(0.4, hold / 2.0))
+            try:
+                with open(target, "a", encoding="utf-8") as fh:
+                    fh.write(stamp)
+                publish("concurrent_writer", path=rel, detail="a second process wrote the file")
+            except OSError as e:
+                publish("concurrent_writer_error", path=rel, detail=str(e))
+
+        writer = threading.Thread(target=interfere, daemon=True)
+        writer.start()
+
+    before = {r.get("receipt_id") for r in receipts(ws)}
+    log(f"turn start driver={driver} session={sid} writer={bool(body.get('concurrent_writer'))}")
+    started = time.time()
+    publish("agent_turn_started", driver=driver, session_id=sid, prompt=prompt,
+            concurrent_writer=bool(body.get("concurrent_writer")))
+
+    if driver == "vendor":
+        cmd = ["bob", "-p", prompt]
+        env = dict(os.environ, COUNTERSIGN_WORKSPACE=ws)
+        p = subprocess.run(cmd, cwd=ws, capture_output=True, text=True, timeout=900, env=env)
+        out, code = (p.stdout or "") + (p.stderr or ""), p.returncode
+    else:
+        cmd = [sys.executable, os.path.join(HERE, "reference_agent.py"), "--workspace", ws,
+               "--session", sid, "--prompt", prompt, "--hold", str(hold)]
+        env = dict(os.environ, COUNTERSIGN_WORKSPACE=ws)
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=300, env=env)
+        out, code = (p.stdout or "") + (p.stderr or ""), p.returncode
+
+    steps = []
+    for line in out.splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            d = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        steps.append(d)
+
+    log(f"turn finished driver={driver} exit={code} after={int((time.time() - started) * 1000)}ms")
+    after = receipts(ws)
+    fresh = [r for r in after if r.get("receipt_id") not in before]
+    verdicts = [{"receipt_id": r.get("receipt_id"), "verdict": r.get("verdict"),
+                 "reason_code": r.get("reason_code"), "exit_code": r.get("exit_code"),
+                 "affected_paths": r.get("affected_paths"),
+                 "latency_ms": r.get("runtime_latency_ms")} for r in fresh]
+    result = {"driver": driver, "session_id": sid, "exit_code": code,
+              "duration_ms": int((time.time() - started) * 1000),
+              "output": out[-4000:], "steps": steps,
+              "verdicts": verdicts, "receipts_written": len(fresh),
+              "refused": any(v["verdict"] == "REFUSED" for v in verdicts)}
+    if writer:
+        writer.join(timeout=3)
+    publish("agent_turn_finished", driver=driver, session_id=sid, exit_code=code,
+            receipts=len(fresh), refused=result["refused"])
+    return result, 200
+
+
+def receipts_replay(ws):
+    """Run the gate's replay mode: every stored verdict recomputed from the inputs the
+    receipt itself recorded, with the hash and the chain rechecked. This is the half that
+    can run in CI after a clone, on a machine that never ran the gate."""
+    if not ws:
+        return {"error": "no repository connected"}, 400
+    env = dict(os.environ, COUNTERSIGN_WORKSPACE=ws)
+    p = subprocess.run([sys.executable, GATE, "replay", "--json"], capture_output=True,
+                       text=True, timeout=120, env=env)
+    try:
+        data = json.loads(p.stdout or "{}")
+    except json.JSONDecodeError:
+        return {"error": "replay produced no report", "exit_code": p.returncode,
+                "stderr": (p.stderr or "")[-500:]}, 500
+    data["exit_code"] = p.returncode
+    return data, 200
+
+
 # ---------------------------------------------------------------------- HTTP
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
+    timeout = 30            # a stalled client must not pin a handler thread forever
 
     def log_message(self, *a):
         pass
@@ -696,6 +930,10 @@ class Handler(BaseHTTPRequestHandler):
             if p == "/api/evidence":
                 return self._send(evidence_rows(ws, q.get("session", [None])[0],
                                                 q.get("filter", ["all"])[0]))
+            if p == "/api/sessions":
+                return self._send(sessions_payload(ws))
+            if p == "/api/stale":
+                return self._send(stale_state(ws))
             if p == "/api/interceptor":
                 return self._send({"rows": interceptor_rows(ws, q.get("filter", ["all"])[0])})
             if p == "/api/receipts":
@@ -848,6 +1086,12 @@ class Handler(BaseHTTPRequestHandler):
                 publish("evidence_checked", session_id=sid, path=b.get("path"),
                         verdict=out.get("verdict"))
                 return self._send({"ok": True, "verdict": out, "gate": r})
+            if p == "/api/receipts/replay":
+                data, code = receipts_replay(ws)
+                return self._send(data, code)
+            if p == "/api/agent/turn":
+                data, code = agent_turn(ws, b)   # the body is already read once at the top
+                return self._send(data, code)
             if p == "/api/interceptor/replay":
                 rid = b.get("receipt_id")
                 r0 = next((x for x in receipts(ws) if x.get("receipt_id") == rid), None)
@@ -945,6 +1189,7 @@ def main():
     os.makedirs(STATE_DIR, exist_ok=True)
     threading.Thread(target=watcher, daemon=True).start()
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    srv.daemon_threads = True
     ws = workspace()
     print(f"countersign runtime {VERSION} on http://127.0.0.1:{PORT}")
     print(f"workspace: {ws or '(none connected - POST /api/repo/connect)'}")

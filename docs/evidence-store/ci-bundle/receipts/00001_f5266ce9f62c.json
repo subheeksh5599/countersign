@@ -1,0 +1,33 @@
+{
+  "affected_paths": [
+    "src/config.ts"
+  ],
+  "branch": "master",
+  "classification_reason": "tool apply_diff is classified state-changing",
+  "current_hashes": {
+    "src/config.ts": "9429601593bdfd8921b8c6f07921e861036812a46d6c992a59d159c92df3221a"
+  },
+  "evidence_hashes": {
+    "src/config.ts": "9429601593bdfd8921b8c6f07921e861036812a46d6c992a59d159c92df3221a"
+  },
+  "exit_code": 0,
+  "git_head": "b31ea9e131722a59ffa67ee6d279cd8702de8414",
+  "previous_receipt_hash": "21278af751ea684dd367673ef1a77544b8270ac93eac4b502418ddd851d89c17",
+  "reason_code": "NONE",
+  "reason_codes": [],
+  "reason_detail": [],
+  "receipt_hash": "f5266ce9f62cab117987e75ed2ad76eeaed11c8d59644ef88ae555a41f4bace7",
+  "receipt_id": "rcpt_00001_421ac68aae24",
+  "repository": "/tmp/csign_acceptance_repo",
+  "runtime_latency_ms": 13,
+  "seq": 1,
+  "session_id": "session_1790496956",
+  "timestamp": "2026-09-27T08:15:57Z",
+  "tool_arguments": {
+    "path": "src/config.ts"
+  },
+  "tool_arguments_hash": "c7d206905ffbf5e9865f0b7d27adb717faccf5d92803e83e080c2e05c3911647",
+  "tool_classification": "state_changing",
+  "tool_name": "apply_diff",
+  "verdict": "ADMITTED"
+}

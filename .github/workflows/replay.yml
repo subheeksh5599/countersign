@@ -1,0 +1,49 @@
+name: receipt replay
+
+# The half that does not need the machine the gate ran on. Every receipt in the committed
+# evidence bundle is re-derived from the inputs it recorded: the stored hash is recomputed,
+# the chain link is checked, and the verdict is compared against what its own digests imply.
+#
+# The second job is the one that matters. It forges an admission on a refusal and asserts
+# the replay fails, so a green build means the check has teeth rather than that it ran.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: put the committed evidence bundle where the gate reads it
+        run: |
+          mkdir -p .countersign
+          cp -r docs/evidence-store/ci-bundle/tasks .countersign/
+          cp -r docs/evidence-store/ci-bundle/receipts .countersign/
+          cp docs/evidence-store/ci-bundle/events.jsonl .countersign/ 2>/dev/null || true
+          cp docs/evidence-store/ci-bundle/stale.jsonl .countersign/ 2>/dev/null || true
+
+      - name: replay every stored verdict from its own recorded inputs
+        env:
+          COUNTERSIGN_WORKSPACE: ${{ github.workspace }}
+        run: |
+          python3 countersign.py replay
+          echo "replay exit 0: every receipt recomputes, links, and follows from its inputs"
+
+      - name: a forged verdict must fail the replay
+        env:
+          COUNTERSIGN_WORKSPACE: ${{ github.workspace }}
+        run: |
+          python3 scripts/forge_a_verdict.py .countersign
+          if python3 countersign.py replay; then
+            echo "::error::a forged verdict passed the replay"
+            exit 1
+          fi
+          echo "the forged verdict was caught, as it must be"
