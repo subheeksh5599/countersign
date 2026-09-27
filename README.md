@@ -56,7 +56,7 @@ the decision path. A model may propose; this gate refuses.
 
 ## The gate
 
-Six modes, each invoked by a hook event or by the operator, over a store on disk.
+Each mode is invoked by a hook event or by a person, over a store on disk.
 
 | Mode | Hook event | What it does |
 |---|---|---|
@@ -65,7 +65,14 @@ Six modes, each invoked by a hook event or by the operator, over a store on disk
 | `check` | PreToolUse | admits, or refuses with exit 2, the proposed state-changing call |
 | `refresh` | console | re-hashes the evidence this task holds and rewrites the manifest |
 | `recheck` | console | the same decision as a dry run: writes no receipt and no event |
+| `replay` | terminal, CI | recompute every stored verdict from the inputs the receipt itself recorded |
+| `status` | terminal | what this workspace's store holds: manifests, the active session, stale held files, receipts by verdict, whether the chain holds |
+| `export` | terminal | write one hashed evidence record per task |
 | `probe` | any event | records the raw payload, never blocks, so live field names can be learned |
+
+At a terminal, `countersign status` reads the store in the current workspace and prints
+exactly that, and `countersign --help` prints the contract. A mistyped mode names the modes
+and exits 2 rather than waiting for a payload no hook will send.
 
 Refusal codes:
 
