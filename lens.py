@@ -74,8 +74,12 @@ def render(ws, events, tasks):
  th{{color:#8b93a1;font-weight:400;font-size:12px}} .mono{{color:#9fb0c4}} .k{{color:#e2b341}}
  .card{{border:1px solid #1c2127;border-radius:6px;padding:10px 12px;margin:8px 0;background:#111419}}
  .code{{color:#ff7b72;font-weight:600}} .meta{{color:#8b93a1;margin:4px 0}} ul{{margin:4px 0 0 18px;padding:0}}
+ .note{{color:#8b93a1;margin:8px 0 0;max-width:80ch}}
 </style>
 <h1>Countersign</h1><div class="meta">workspace {esc(ws)}</div>
+<p class="note">A static record of one run, rendered from the store that run left on disk.
+The operable console reads a live runtime instead: clone the repository, run
+<span class="mono">sh run.sh</span>, and open <span class="mono">http://127.0.0.1:4311/console</span>.</p>
 <p class="banner">Every refusal below is a state-changing action that did not run, because the
 evidence the task was holding no longer described this workspace.</p>
 <div class="counts"><div><b>{len(tasks)}</b>tasks</div><div><b>{len(obs)}</b>observations</div>
