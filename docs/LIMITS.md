@@ -27,3 +27,22 @@ What this gate does not do, in the same breath as what it does.
   covered by tests and by the demo scene, not yet by a captured live payload.
 - Nothing here reads a private API. The gate consumes the public hook payload and the
   workspace itself.
+
+## Installed twice
+
+Both a machine-wide block and a workspace block observe the same call. The live session
+on 2026-09-27 shows the effect plainly: 4 intercepted calls, 8 verdict events and only 4
+receipt files, because the machine-wide copy was still the older build, which appended a
+verdict to the event log without writing a receipt. With one gate installed the counts are
+exactly equal: 3 intercepted calls, 3 verdict events, 3 receipt files, every hash verifying,
+each receipt chained to the one before it.
+
+Install one or the other. `install.sh` now prints a warning when it finds a machine-wide
+block while merging a workspace block, because two gates means every state-changing call is
+checked twice and produces two receipts.
+
+## Two clones, two manifests
+
+A change that exists only on another machine is invisible to a local check. The multi
+developer scene shows the boundary: the edit is admitted before the fetch and refused after
+it. Closing that gap needs the receipts replayed on a server, which is not built.

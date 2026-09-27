@@ -4,8 +4,11 @@ Legend: [x] done and verified by a real run · [~] built but not yet exercised e
 end · [ ] outstanding · (axis) the judging axis it moves · → the artifact that proves it.
 
 Status line: public at github.com/subheeksh5599/countersign, pages published on GitHub
-Pages, 515 tests passing (15 behaviour cases + 500-case matrix), one live refusal and
-one live admission recorded from a real session, two further scenes recorded verbatim.
+Pages, 528 tests passing (15 behaviour cases + 500-case matrix + 13 receipt, chain,
+redaction and policy cases), the 17 step fresh machine acceptance run passing against a
+live runtime, one live refusal and one live admission recorded from a real session, two
+further scenes recorded verbatim, and a local control plane (runtime plus a five page
+console that holds no sample data) driving the same gate command the agent's hook runs.
 
 ## A. Mechanism — done and verified
 - [x] Evidence manifest per task, not one global file (Application) →
@@ -97,12 +100,36 @@ one live admission recorded from a real session, two further scenes recorded ver
 - [x] Evidence store from the live session committed for verification →
       `docs/evidence-store/`
 
-## F. Where the marks come from
+## F. Control plane — the runtime and the console
+- [x] Runtime on 127.0.0.1:4319, stdlib only, serving HTTP and server sent events, and
+      holding no evidence of its own → `runtime/countersign_runtime.py`, `docs/RUNTIME.md`
+- [x] Watcher with three real jobs: forward gate events, re-hash held files and publish
+      `filesystem_changed` when one moves, publish `git_head_changed` when HEAD moves
+- [x] Console with five pages and a sidebar, each item on its own URL, no sample data:
+      protect, evidence, interceptor, receipts, self-test → `landing/app/console/`
+- [x] Homepage answers the five questions: protected?, what is held?, what went stale?,
+      what did the last call do?, can the mechanism be reproduced right now?
+- [x] Receipts persisted as full field files, chained by `previous_receipt_hash`, with a
+      local verify that recomputes the hash → `.countersign/receipts/`
+- [x] Secret redaction verified by test: an API key, an authorization header and a
+      password leave no trace in the receipt file, structure preserved
+- [x] Explicit state-changing policy, recorded in each receipt, failing closed for an
+      unrecognised tool or command → `tests/test_receipts.py`
+- [x] Real recovery: refresh re-hashes the held files and rewrites the manifest, and the
+      retried call is then admitted with a second receipt
+- [x] 17 step acceptance run against a live runtime, on a repository it creates from
+      nothing → `scripts/acceptance.py`
+- [x] One command startup → `run.sh`
+- [x] Static snapshot console retired: the product console reads the runtime, and reports
+      DISCONNECTED with the start command rather than showing plausible data
+
+## G. Where the marks come from
 - Application: refusal produced by the runtime's own hook on a real session, from its
-  own payloads, with its own task id in the receipt; public repo; 515 tests.
-  → sections A, B, C.
-- Presentation: the refusal, the recovery, and one lens page built from real events.
-  → sections B, C, and the two open items in D.
+  own payloads, with its own task id in the receipt; a local control plane over the real
+  store; public repo; 528 tests and a 17 step acceptance run.
+  → sections A, B, C, F.
+- Presentation: the refusal, the recovery, the receipt chain and a console built from
+  live state only. → sections B, C, F, and the open item in D.
 - Business: buyer, budget line, measured saving, machine-wide enforcement by default.
   → `PITCH.md` market section, section C.
 - Originality: the object is evidence identity, not opinion; the field audits

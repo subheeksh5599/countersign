@@ -44,3 +44,37 @@ The agent's own report of what happened:
 
 The file on disk was not modified. The verdict and its receipt are in
 `.countersign/events.jsonl`.
+
+## Second live run: 2026-09-27, headless task, real receipts
+
+A headless task on a real workspace with the workspace hook block installed. Task id
+`eea2941f4db4a1f67c401695b74446d0`, cost 1.05 Bobcoins, 44.6 seconds, 8 tool calls.
+
+The agent read `pricing.ts` and then attempted the edit four times with three different
+tools. Every attempt was refused at exit code 2 with `EVIDENCE_SUPERSEDED`, and each one
+wrote a receipt file:
+
+```
+rcpt_00000_d5b43485bfce  apply_diff          REFUSED  exit 2  chained to nothing
+rcpt_00001_c2f764034810  apply_diff          REFUSED  exit 2  chained to rcpt_00000
+rcpt_00002_e8659a4144cc  apply_diff          REFUSED  exit 2  chained to rcpt_00001
+rcpt_00003_77b2ab6baab7  search_and_replace  REFUSED  exit 2  chained to rcpt_00002
+```
+
+`pricing.ts` after the run still holds the text the concurrent writer put there: the
+refused calls changed nothing. The agent's own closing message:
+
+> Once that process is stopped, re-run the task and the change rate = 1 -> rate = 5 will
+> apply cleanly. The target line is on line 1 of the file and the content is
+> straightforward; it will succeed as soon as the file is stable.
+
+That is the product's claim written by the agent itself: the edit did not land while the
+evidence was stale, and the way forward is to make the file stable and act on current
+evidence.
+
+The run also exposed a real installation defect. The machine-wide block was still
+pointing at an older build, so both gates observed each call: 4 intercepted calls produced
+8 verdict events and 4 receipt files, because the older copy appended a verdict without
+writing a receipt. With one gate installed the counts are equal, verified on a separate
+workspace: 3 intercepted calls, 3 verdict events, 3 receipt files, all hashes recomputed
+and all links in the chain intact. `install.sh` now warns when both blocks are present.

@@ -1,20 +1,33 @@
 # Countersign
 
-**Live status:** gate implemented and exercised — 15/15 tests passing; the two-task
-and command scenes reproduced on a real repository; the lens page rendered from real
-events; a decision measured at 308 ms against a 10 s default hook timeout. Vendor
-hook wiring verified against the vendor's own hook documentation; not yet wired into
+**Live status:** gate, runtime and console implemented and exercised. 528 tests passing
+(500 case matrix, 15 behaviour cases, 13 receipt and policy cases), the 17 step fresh
+machine acceptance run passing against a live runtime, real refusals recorded from a
+real agent session, receipts chained and verifiable, one decision measured at 308 ms
+against a 200 observation manifest and a 10 s default hook timeout. Not yet wired into
 a licensed desktop install.
 
-A countersign is a page scraped clean and written over, with the old text still
-faintly visible. An agent transcript is that page: the file it describes may
-already have changed underneath it, and the task keeps reading from the old text.
+A countersign is a page scraped clean and written over, with the old text still faintly
+visible. An agent transcript is that page: the file it describes may already have changed
+underneath it, and the task keeps reading from the old text.
 
-Countersign is a gate. Before a state-changing tool call, it verifies that the
-evidence the task is relying on still describes the workspace the call is about
-to touch. When it does not, the call is refused with exit code 2 — not warned
-about, refused — and the refusal names the digest it holds, the digest on disk,
-the reason, and the recovery steps.
+Countersign is a local control plane for an AI coding agent. Before a state-changing tool
+call it verifies that the evidence the task relies on still describes the repository the
+call is about to touch. When it does not, the call is refused with exit code 2, not warned
+about, and the refusal names the digest the task holds, the digest on disk, the reason and
+the recovery steps. Every verdict persists a receipt.
+
+```
+agent --PreToolUse--> gate (countersign.py) --> .countersign/ store on disk
+                                                     |
+                                     runtime watches  +--> http://127.0.0.1:4319  (HTTP + SSE)
+                                                     |
+                                                             console  http://127.0.0.1:4311/console
+```
+
+The gate owns the state. The runtime owns no evidence of its own: every value it serves is
+read from the store the gate wrote, or measured with real `git` and filesystem calls. The
+console holds no sample data at all; when the runtime is not reachable it says so.
 
 ## The failure it exists for
 
@@ -22,106 +35,147 @@ Documented behaviour of the runtime this gate is built for, quoted from its own
 documentation:
 
 - "Compaction is lossy. Details from early in the task may not survive."
-- "Once bad context is in Messages, it persists across every subsequent prompt.
-  Bob does not reliably ignore plausible text just because it is wrong."
-- A listed cause: "Stale or wrong repo text: Outdated comments, README fragments,
-  or generated docs mislead file reads."
-- The documented recovery: "The reliable fix is a new task." That recovery is
-  manual, and it depends on a human noticing.
-- Rollback scope: snapshots cover the task's own file modifications, and
-  "external changes: modifications made outside of tasks (manual edits, other
-  tools) are not included."
+- "Once bad context is in Messages, it persists across every subsequent prompt. Bob does
+  not reliably ignore plausible text just because it is wrong."
+- A listed cause: "Stale or wrong repo text: Outdated comments, README fragments, or
+  generated docs mislead file reads."
+- The documented recovery: "The reliable fix is a new task." That recovery is manual, and
+  it depends on a human noticing.
+- Rollback scope: snapshots cover the task's own file modifications, and "external changes:
+  modifications made outside of tasks (manual edits, other tools) are not included."
 
-So the runtime can hold facts that reality has already invalidated, the only
-defence is a person noticing, and the documented fix is to start over.
+So the runtime can hold facts that reality has already invalidated, the only defence is a
+person noticing, and the documented fix is to start over.
 
 ## The invariant
 
-> No state-changing action may use repository evidence whose identity is no
-> longer current.
+> No state-changing action may use repository evidence whose identity is no longer current.
 
-The verdict is arithmetic: digests, task identity, commit identity. No model
-participates in the decision. What a model may do is propose; what this gate does
-is refuse.
+The verdict is arithmetic: digests, task identity, commit identity. No model participates in
+the decision path. A model may propose; this gate refuses.
 
-## How it works
+## The gate
 
-Three hook modes over a store on disk.
+Six modes, each invoked by a hook event or by the operator, over a store on disk.
 
 | Mode | Hook event | What it does |
 |---|---|---|
-| `session-start` | SessionStart | opens an evidence manifest for this task |
+| `session-start` | SessionStart | opens an evidence manifest for this task (resuming one keeps its evidence) |
 | `record` | PostToolUse | records the digest of every file read and every command result |
-| `check` | PreToolUse | admits or refuses the proposed state-changing call |
+| `check` | PreToolUse | admits, or refuses with exit 2, the proposed state-changing call |
+| `refresh` | console | re-hashes the evidence this task holds and rewrites the manifest |
+| `recheck` | console | the same decision as a dry run: writes no receipt and no event |
 | `probe` | any event | records the raw payload, never blocks, so live field names can be learned |
-| `export` | manual | writes one hashed evidence record per task, for review |
 
 Refusal codes:
 
 | Code | Meaning |
 |---|---|
 | `EVIDENCE_SUPERSEDED` | the file changed after this task observed it |
-| `CROSS_TASK_EVIDENCE` | the only recorded evidence belongs to a different task |
-| `WORKSPACE_MOVED` | the commit moved after the manifest opened |
+| `CROSS_TASK_EVIDENCE` | the only recorded evidence for the path belongs to a different task |
 | `COMMAND_RESULT_CHANGED` | rerunning a recorded command produced a different result |
+| `UNSUPPORTED_SUBTASK_EVIDENCE` | a change was attributed to a subtask that never observed the path |
+| `REVISION_MOVED` | the path was committed at a different revision after the task observed it |
 | `UNVERIFIED_TARGET` | policy requires prior observation and there is none |
-| `NO_MANIFEST` | nothing recorded, therefore nothing verifiable — fail closed |
+| `NO_MANIFEST` | nothing recorded, therefore nothing verifiable: fail closed |
 
-Per-task manifests live in `.countersign/tasks/<task>.json`; every verdict is
-appended to `.countersign/events.jsonl` with a SHA-256 receipt. A missing manifest
-refuses the action rather than allowing it.
+Per-task manifests live in `.countersign/tasks/<task>.json`, the event log in
+`.countersign/events.jsonl`, receipts in `.countersign/receipts/`. A missing manifest
+refuses the action rather than allowing it. Anything unreadable, including a payload that
+is valid JSON but not an object, fails closed.
+
+## Receipts
+
+Every verdict, allowed or refused, persists a receipt file with the full field set:
+
+```
+receipt_id, timestamp, session_id, repository, branch, git_head, tool_name,
+tool_classification, classification_reason, tool_arguments, tool_arguments_hash,
+affected_paths, evidence_hashes, current_hashes, verdict, reason_code, exit_code,
+runtime_latency_ms, previous_receipt_hash, receipt_hash, seq
+```
+
+`receipt_hash` is the SHA-256 of the canonical receipt content, so verification is one
+local recomputation: the console's verify button reads the stored file, strips
+`receipt_hash`, hashes the rest and compares. `previous_receipt_hash` stores the hash of
+the receipt written before it, which makes the log a chain: the console walks it and
+reports whether every link verifies.
+
+## Policy, secrets, classification
+
+Tool calls are classified by an explicit policy, recorded in the receipt:
+
+- file writes, edits, patches, deletes, moves and code generation are state-changing;
+- git commit, checkout, reset, merge, rebase, package installs that touch lockfiles, in
+  place edits and shell redirects are state-changing;
+- read-only tools are read-only;
+- for a shell call the command decides first: a mutation pattern makes it state-changing,
+  an explicit read-only allowlist (`git status`, `git log`, `ls`, `grep`, `cat`,
+  `git diff`, and similar) makes it read-only, and anything else fails closed;
+- an unrecognised tool, or a payload with no tool name, fails closed.
+
+Stored tool arguments are redacted: values whose key or shape looks like a credential are
+replaced with a length and digest fingerprint, while the structure of the call is kept so a
+reviewer can see which operation was intercepted and what it was aimed at. Verified by
+test: a payload carrying an API key, an authorization header and a password leaves none of
+the three anywhere in the receipt file.
 
 ## Measured cost of a decision
 
-308 ms for a check against a manifest holding 200 observations, including the git
-commit read (mean of 20 runs, a two-core laptop). The default hook timeout is 10 s and can be overridden. Refusal is
-therefore cheap enough to run on every state-changing call, and it never spends
-tokens — the verdict is a digest comparison, not a model call.
+308 ms for a check against a manifest holding 200 observations, including the git commit
+read (mean of 20 runs, a two core laptop). The default hook timeout is 10 s and can be
+overridden. Refusal is therefore cheap enough to run on every state-changing call, and it
+never spends tokens: the verdict is a digest comparison, not a model call.
 
-## Serving the produced evidence
+## Run it
 
-The product site and console are a Next.js app in `landing/`, deployed at
-https://countersign-eight.vercel.app. The console reads the recorded evidence stores
-committed under `docs/evidence-store/` (four scenes: a live session, the scripted
-two-task scene, the revision-moved scene, and a 200-observation scale check) and shows
-verdicts, refusal codes, per-task manifests and the raw event log. Regenerate its data
-with `npm run sync-store` inside `landing/`.
+```sh
+sh run.sh                      # runtime on 4319, console on 4311
+sh run.sh --runtime-only       # runtime only
+COUNTERSIGN_WORKSPACE=/path/to/repo sh run.sh
+```
 
-`docs/index.html` is a lens page generated from a live session's evidence store
-(committed at `docs/evidence-store/`); `docs/scripted.html` is the same page for the
-two-task scene and `docs/comparison.html` is the one-screen field comparison. All three
-are published on GitHub Pages. Regenerate with
-`python3 lens.py <workspace> -o docs/index.html` and copy across, or serve locally;
-there is no server code and no build step.
+Then open `http://127.0.0.1:4311/console`. Nothing is installed globally and nothing is
+sent anywhere: Python 3 and Node are the only requirements.
+
+The console is five operational pages, each reading the live runtime over HTTP and
+subscribing to its server sent event stream:
+
+| Page | What it shows |
+|---|---|
+| `protect` | protection state, repository, branch, HEAD, session, last verdict, last receipt, live latency; held evidence against current repository; stale evidence panel with the real recovery action; latest intercepted call; latest receipt; security state; operator actions; run self-test |
+| `evidence` | the session's evidence set with filters, per item held digest, current digest, git revision, last read, last verified, status, and per item re-check and refresh |
+| `interceptor` | every intercepted call with classification, verdict, reason, exit code, latency and receipt; detail view with the redacted arguments and a replay of the deterministic check |
+| `receipts` | the receipt log, the chain and a detail view with copy, download and verify |
+| `self-test` | the whole mechanism run against a fresh temporary repository, with the real exit codes, both receipts and the file content on disk afterwards |
+
+Repository controls (connect, protect, stop, refresh git state, create demo repository,
+start demo) and operator actions (start session, record read, attempt edit) all perform
+real operations: they install or remove real hook entries, invoke the real gate command
+with the payload the agent sends, and re-hash real files.
+
+## The runtime API
+
+`GET /api/status`, `/api/repo`, `/api/session`, `/api/evidence`, `/api/interceptor`,
+`/api/receipts`, `/api/receipts/<id>`, `/api/receipts/<id>/download`, `/api/security`,
+`/api/stream` (SSE).
+`POST /api/repo/connect`, `/api/repo/demo`, `/api/repo/protect`, `/api/repo/stop`,
+`/api/repo/refresh`, `/api/session/start`, `/api/evidence/read`, `/api/evidence/refresh`,
+`/api/evidence/recheck`, `/api/interceptor/attempt`, `/api/interceptor/replay`,
+`/api/receipts/<id>/verify`, `/api/selftest`, `/api/demo/start`.
+
+Event names on the stream: `runtime_hello`, `session_started`, `file_read`,
+`evidence_created`, `filesystem_changed`, `git_head_changed`, `tool_intercepted`,
+`evidence_checked`, `tool_refused`, `tool_allowed`, `receipt_created`,
+`evidence_refreshed`, `repository_connected`, `protection_started`, `protection_stopped`,
+`selftest_step`, `selftest_started`, `selftest_finished`, `check_replayed`. The watcher
+polls nothing on a timer in the browser: pages subscribe and refetch when the runtime
+publishes.
 
 ## Wiring
 
-A workspace hook block, matching the documented schema (`hooks` → event → array
-of `{matcher, hooks:[{type, command, timeout}]}`):
-
-```json
-{
-  "hooks": {
-    "SessionStart": [
-      { "hooks": [ { "type": "command",
-                     "command": "python3 .countersign/countersign.py session-start",
-                     "timeout": 10 } ] }
-    ],
-    "PostToolUse": [
-      { "matcher": "^(read_file|execute_command)$",
-        "hooks": [ { "type": "command",
-                     "command": "python3 .countersign/countersign.py record",
-                     "timeout": 10 } ] }
-    ],
-    "PreToolUse": [
-      { "matcher": ".*(write|edit|patch|replace|apply|delete|move|command).*",
-        "hooks": [ { "type": "command",
-                     "command": "python3 .countersign/countersign.py check",
-                     "timeout": 10 } ] }
-    ]
-  }
-}
-```
+`install.sh` copies the gate into the workspace and merges the hook block. It is
+idempotent: a second install adds no entries.
 
 ```sh
 sh install.sh /path/to/workspace            # prints the block it would merge
@@ -129,85 +183,58 @@ sh install.sh /path/to/workspace --write    # merges into .bob/settings.json
 export COUNTERSIGN_WORKSPACE=/path/to/workspace
 ```
 
-Configuration is environment only, with no defaults: `COUNTERSIGN_WORKSPACE` is
-required, `COUNTERSIGN_REQUIRE_PRIOR_READ=1` additionally refuses writes to paths
-this task never observed.
+Configuration is environment only, with no defaults: `COUNTERSIGN_WORKSPACE` is required,
+`COUNTERSIGN_REQUIRE_PRIOR_READ=1` additionally refuses writes to paths this task never
+observed. Ports: `COUNTERSIGN_PORT` (4319), `PORT` for the console (4311).
 
-## The demo, reproduced
+## Verification
 
-Real repository, real external modification, real refusals, real receipts:
-
-```
-== task A opens and observes src/sarif.ts ==
-== task B opens, observes src/report.ts, and rewrites src/sarif.ts for real ==
-src/sarif.ts rewritten by task B
-
-== task A resumes and proposes an edit to the file that changed ==
-REFUSED: EVIDENCE_SUPERSEDED
-About to modify src/sarif.ts.
-Evidence this task holds: 67e850b5eb43.
-Digest on disk now: 8c2f925fa187.
-  EVIDENCE_SUPERSEDED: 67e850b5eb43 -> 8c2f925fa187 (the file changed after this task observed it)
-Required recovery:
-  1. open a fresh task
-  2. re-observe src/sarif.ts
-  3. rerun the affected commands
-  4. record the new evidence manifest
-Refusal receipt: 2bf25447d82bc979bc0435f2f055c3a080cdf1c368daa36520cfda211bd3f5a1
-The action did not happen.
-exit=2
-
-== task A proposes an edit to a file only task B has ever observed ==
-REFUSED: CROSS_TASK_EVIDENCE
-  CROSS_TASK_EVIDENCE: task_B -> task_A (the only recorded evidence for this path belongs to another task)
-exit=2
-
-== recovery: fresh task, re-observe, same edit admitted ==
-{"verdict": "ADMITTED", "note": "evidence current, receipt 471500a19f1e"}
-exit=0
+```sh
+python3 tests/test_gate.py         # 15 behaviour cases
+python3 tests/test_matrix.py -j 6  # 500 case matrix across families of payloads and states
+python3 tests/test_receipts.py     # 13 cases: receipts, chain, redaction, policy, recovery
+python3 scripts/acceptance.py      # the 17 step fresh machine run, against a live runtime
 ```
 
-## Tests
+Each test builds a real git workspace, writes real files, and runs the gate as a subprocess,
+asserting the exit code and the refusal code. The acceptance run creates a repository,
+connects it, protects it, opens a session, records a read, changes the file from a second
+process, attempts the edit, reads the refusal, refreshes the evidence, retries, verifies
+the receipt chain and finally runs the self-test, printing what it observed at every step.
 
-```
-$ python3 tests/test_gate.py
-PASS  current evidence is admitted
-PASS  external change refused
-PASS  fresh observation is admitted
-PASS  cross-task evidence refused
-PASS  moved workspace refused
-PASS  contradicted command result refused
-PASS  unobserved target refused under policy
-PASS  missing manifest fails closed
-PASS  contradicted command blocks further commands
-PASS  refusals recorded with receipts
-
-10/10 passed
-```
-
-Each test builds a real git workspace, writes real files, and runs the gate as a
-subprocess, asserting both the exit code and the refusal code.
+Interception is not simulated: the runtime invokes the gate command with the payload the
+agent sends and keeps the exit code the process returned.
 
 ## What is not proven
 
-- Whether the runtime's own edit path already refuses a write to a file changed
-  since it was read. Its tool documentation describes no such behaviour, but
-  silence is not evidence. The cross-task, workspace-move and contradicted-command
-  cases are the ones this gate provably owns.
-- What an `apply_diff`-style payload actually carries. The refusal keys off path,
-  digests and recorded observations only, so nothing here depends on the pending
-  content — which is why the gate behaves the same if that payload is thin.
-- Subagent-reported digests: a subagent's observations arrive through the parent's
-  tool results, so per-subagent manifests are not yet separated.
-- Any use outside real git workspaces. Nothing here reads a vendor-private API;
-  the gate consumes the public hook payload plus the workspace itself.
+- Whether the runtime's own edit path already refuses a write to a file changed since it
+  was read. Its tool documentation describes no such behaviour, and silence is not
+  evidence, but nothing here depends on it.
+- What an `apply_diff` payload carries beyond path and diff: the refusal keys off path,
+  digests and recorded observations only.
+- Subagent digests: a subagent's observations arrive through the parent's tool results, so
+  per-subagent manifests are not separated.
+- Enforcement reach: the hook is installed per workspace or per machine, so a repository
+  guarded on one machine is not guarded on another. The receipts are the artefact a CI job
+  would verify, and that server side replay is not built.
+- Nothing here reads a vendor private API: the gate consumes the public hook payload plus
+  the workspace itself.
 
 ## Layout
 
 ```
-countersign.py        the gate (session-start | record | check)
-hooks.json           the hook block for a workspace settings file
-install.sh           copies the gate in and merges the hook block
-tests/test_gate.py   ten real end-to-end cases
-demo-workspace/      a real clone used for the two-task reproduction
+countersign.py              the gate
+runtime/countersign_runtime.py   the local control plane (stdlib only, HTTP + SSE)
+run.sh                      start runtime and console together
+install.sh                  installs the gate and merges the hook block
+landing/                    the Next.js console and product site
+tests/test_gate.py          15 behaviour cases
+tests/test_matrix.py        500 case matrix
+tests/test_receipts.py      13 receipt, chain, redaction and policy cases
+scripts/acceptance.py       the 17 step fresh machine acceptance run
+scripts/acceptance_gate.sh  the same mechanism at gate level, no runtime
+docs/LIVE_RUN.md            a refusal recorded from a real agent session
+docs/MULTI_DEV_RUN.md       admitted before fetch, refused after
+docs/SCENE_REVISION_MOVED.md  identical bytes, moved revision, refused
+docs/evidence-store/        recorded stores from four real scenes
 ```

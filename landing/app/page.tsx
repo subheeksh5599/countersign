@@ -84,7 +84,7 @@ export default function Page() {
             ))}
           </nav>
           <div className="flex items-center gap-2">
-            <a href="/dashboard" className="ghost hidden px-3 py-2 text-body font-medium sm:block">
+            <a href="/console" className="ghost hidden px-3 py-2 text-body font-medium sm:block">
               Console
             </a>
             <a href={EVIDENCE} className="cta px-4 py-2 text-body font-medium">
@@ -112,7 +112,7 @@ export default function Page() {
                 Read the source
               </a>
               <a
-                href="/dashboard"
+                href="/console"
                 className="hairline ghost flex items-center gap-1.5 px-4 py-2.5 font-medium text-graphite"
               >
                 Open the console
@@ -294,7 +294,7 @@ export default function Page() {
             <a href={EVIDENCE} className="hover:text-ink">
               Evidence
             </a>
-            <a href="/dashboard" className="hover:text-ink">
+            <a href="/console" className="hover:text-ink">
               Console
             </a>
             <a href={COMPARISON} className="hover:text-ink">

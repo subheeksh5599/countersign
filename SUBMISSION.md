@@ -63,9 +63,21 @@ Bob documents and enforces its hooks.
 
 ## Live links
 
-- Product site and console: https://countersign-eight.vercel.app
-- Console pages: /dashboard, /dashboard/refusals, /dashboard/tasks, /dashboard/events
+- Product site: https://countersign-eight.vercel.app
 - Repository: https://github.com/subheeksh5599/countersign
+
+The console is local first, because it controls a runtime on your machine. It holds no
+sample data at all: with no runtime reachable it reports DISCONNECTED rather than showing
+anything plausible.
+
+```sh
+git clone https://github.com/subheeksh5599/countersign
+cd countersign && sh run.sh          # runtime on 4319, console on 4311
+```
+
+Then open http://127.0.0.1:4311/console and press "create demo repository". The console
+has five pages: protect, evidence, interceptor, receipts, self-test. The self-test page
+builds a fresh repository and runs the whole mechanism with real exit codes.
 - Evidence page from the live session: https://subheeksh5599.github.io/countersign/
 - The comparison page: https://subheeksh5599.github.io/countersign/comparison.html
 - The scripted two-task scene: https://subheeksh5599.github.io/countersign/scripted.html

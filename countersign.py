@@ -1,38 +1,136 @@
 #!/usr/bin/env python3
-"""COUNTERSIGN -- a page scraped clean and written over, with the old text still
-faintly visible. An agent transcript is that page: the file it describes may
+"""COUNTERSIGN -- the gate.
+
+An agent transcript is a page written over an older page: the file it describes may
 already have changed underneath it, and the task keeps reading from the old text.
 
-The gate refuses a state-changing tool action whose supporting evidence no longer
-describes the workspace the action is about to touch. The verdict is computed from
-digests, task identity and commit identity stored on disk. No model participates.
+Before a state-changing tool call this gate compares the evidence the task holds
+(file digests, command results, committed revision) against the repository right now.
+If they disagree the call is refused with exit code 2, and a receipt is persisted.
 
-Modes, driven by the vendor's lifecycle hook payloads on stdin:
+The verdict is a hash comparison. No model participates.
+
+Modes (hook payload on stdin, JSON):
   session-start   open an evidence manifest for this task
-  record          record the identity of evidence observed (file reads, commands)
+  record          record evidence observed (file reads, command results)
   check           before a state-changing call: admit, or refuse with exit 2
+  refresh         re-hash held evidence and update the manifest (real mutation)
+  recheck         dry run: compute the verdict, change nothing, write no receipt
+  probe           record raw payloads without ever blocking
+  export          write one hashed evidence record per task
 
 Environment only, no defaults:
   COUNTERSIGN_WORKSPACE           absolute path of the workspace under control
   COUNTERSIGN_REQUIRE_PRIOR_READ  "1" refuses writes to never-observed paths
 """
-import hashlib, json, os, subprocess, sys, time
+import hashlib, json, os, re, subprocess, sys, time
 
 WS = os.environ.get("COUNTERSIGN_WORKSPACE")
-STORE = TASKS = EVENTS = None
+STORE = TASKS = EVENTS = RECEIPTS = None
 REQUIRE_PRIOR_READ = os.environ.get("COUNTERSIGN_REQUIRE_PRIOR_READ") == "1"
+STARTED = time.time()
+
+# ---------------------------------------------------------------- tool policy
+# Explicit classification. Unknown state-changing tools fail closed: the gate must
+# decide about a mutation it does not recognise, not wave it through.
+READ_ONLY_TOOLS = {
+    "read_file", "glob", "grep", "search", "list_dir", "list_files", "ls",
+    "view_file", "open_file", "cat", "head", "tail", "stat", "file_info",
+    "web_search", "web_fetch", "todo_read", "think",
+}
+STATE_CHANGING_TOOLS = {
+    "write_file", "apply_diff", "search_and_replace", "edit_file", "create_file",
+    "str_replace", "insert_content", "append_file", "delete_file", "remove_file",
+    "move_file", "rename_file", "copy_file", "mkdir", "execute_command",
+    "run_command", "shell", "bash", "terminal", "git_commit", "git_checkout",
+    "git_reset", "git_merge", "git_rebase", "package_install",
+}
+MUTATING_COMMAND_PATTERNS = [
+    (re.compile(r"\bgit\s+(commit|checkout|reset|merge|rebase|cherry-pick|revert|clean|push|apply|stash)\b"), "git mutation"),
+    (re.compile(r"\b(npm|pnpm|yarn|bun)\s+(i|install|add|remove|uninstall|update|upgrade)\b"), "package install that changes lockfiles"),
+    (re.compile(r"\b(pip|pip3|poetry|uv)\s+(install|add|remove|uninstall)\b"), "package install"),
+    (re.compile(r"\b(rm|rmdir|mv|cp|install|truncate|tee)\b"), "filesystem mutation"),
+    (re.compile(r"\bsed\s+-i\b|\bperl\s+-i\b"), "in-place edit"),
+    (re.compile(r"\b(chmod|chown|ln)\b"), "permission or link change"),
+    (re.compile(r"(^|[^>])>{1,2}[^>]"), "shell redirect writes a file"),
+    (re.compile(r"\b(codegen|scaffold|generate)\b"), "code generation into the repository"),
+]
+# Commands that only observe. Anything absent from this list and matching no mutation
+# pattern is refused rather than assumed harmless.
+READ_ONLY_COMMANDS = re.compile(
+    r"^git\s+(status|log|diff|show|rev-parse|describe|ls-files|ls-tree|cat-file|blame|"
+    r"shortlog|remote\s+-v|branch|tag|stash\s+list|config\s+--get)\b"
+    r"|^(ls|cat|head|tail|wc|grep|rg|find|file|stat|pwd|which|env|du|df|tree|jq|sort|uniq|"
+    r"cut|echo|printf|sed\s+-n|node\s+--version|python3?\s+--version|npm\s+(ls|view))\b")
 
 
+REDACT_KEYS = re.compile(
+    r"(api[_-]?key|token|secret|password|passwd|authorization|auth|cookie|"
+    r"private[_-]?key|credential|bearer|session[_-]?key|access[_-]?key)", re.I)
+REDACT_VALUES = re.compile(
+    r"(sk-[A-Za-z0-9]{12,}|ghp_[A-Za-z0-9]{12,}|gho_[A-Za-z0-9]{12,}|"
+    r"bob_prod_[A-Za-z0-9_.-]{12,}|xox[baprs]-[A-Za-z0-9-]{10,}|"
+    r"eyJ[A-Za-z0-9._-]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)")
+
+
+def classify(tool, inp):
+    """Return (kind, reason). Deterministic, no model.
+
+    A shell call is judged by its command first: a mutation pattern makes it
+    state-changing, an explicit read-only allowlist makes it read-only, and anything
+    else fails closed, because an unreadable command must not be waved through.
+    """
+    cmd = str(inp.get("command") or inp.get("cmd") or "")
+    if cmd:
+        for pat, why in MUTATING_COMMAND_PATTERNS:
+            if pat.search(cmd):
+                return "state_changing", f"mutating command: {why}"
+        if READ_ONLY_COMMANDS.match(cmd.strip()):
+            return "read_only", "command is in the read-only allowlist and mutates nothing"
+        return "state_changing", ("command is not in the read-only allowlist: fail closed")
+    if tool in STATE_CHANGING_TOOLS:
+        return "state_changing", f"tool {tool} is classified state-changing"
+    if tool in READ_ONLY_TOOLS:
+        return "read_only", f"tool {tool} is classified read-only"
+    if tool is None:
+        return "state_changing", "no tool name in the payload: fail closed"
+    return "state_changing", f"tool {tool} is not in the read-only policy: fail closed"
+
+
+def redact(value, depth=0):
+    """Mask secrets but keep the shape of the arguments, so a reviewer can see which
+    operation was intercepted and what it was aimed at."""
+    if depth > 6:
+        return "<deeply nested>"
+    if isinstance(value, dict):
+        out = {}
+        for k, v in value.items():
+            if isinstance(v, str) and (REDACT_KEYS.search(str(k)) or REDACT_VALUES.search(v)):
+                out[k] = f"<redacted:{len(v)} chars:sha256:{digest(v.encode())[:8]}>"
+            else:
+                out[k] = redact(v, depth + 1)
+        return out
+    if isinstance(value, list):
+        return [redact(v, depth + 1) for v in value[:50]]
+    if isinstance(value, str):
+        if REDACT_VALUES.search(value):
+            return REDACT_VALUES.sub("<redacted>", value)
+        if REDACT_KEYS.search(value) and len(value) > 40:
+            return f"<redacted:{len(value)} chars:sha256:{digest(value.encode())[:8]}>"
+        return value if len(value) <= 4000 else value[:4000] + "<truncated>"
+    return value
+
+
+# ---------------------------------------------------------------- store plumbing
 def bind_workspace(ws):
-    """Resolve the workspace and its store. The environment variable wins; the cwd
-    every hook payload carries is the fallback, so a global hook works in any
-    workspace without per-project configuration. With neither, nothing is verified
-    and the caller fails closed."""
-    global WS, STORE, TASKS, EVENTS
+    """Resolve the workspace and its store. The environment variable wins; the cwd in
+    the hook payload is the fallback; with neither the caller fails closed."""
+    global WS, STORE, TASKS, EVENTS, RECEIPTS
     WS = ws
     STORE = os.path.join(WS, ".countersign")
     TASKS = os.path.join(STORE, "tasks")
     EVENTS = os.path.join(STORE, "events.jsonl")
+    RECEIPTS = os.path.join(STORE, "receipts")
 
 
 def now():
@@ -43,10 +141,11 @@ def digest(b):
     return hashlib.sha256(b).hexdigest()
 
 
+def canon(obj):
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"))
+
+
 def relpath_in_workspace(p):
-    """Tool payloads carry absolute paths. Evidence is keyed by workspace-relative
-    path; anything outside the workspace is reported as outside, not silently
-    rewritten into a relative path that could collide."""
     if not p:
         return "", False
     ap = os.path.abspath(p) if os.path.isabs(p) else os.path.abspath(os.path.join(WS, p))
@@ -60,20 +159,25 @@ def file_digest(rel):
     try:
         with open(os.path.join(WS, rel), "rb") as fh:
             return digest(fh.read())
-    except (FileNotFoundError, IsADirectoryError):
+    except (FileNotFoundError, IsADirectoryError, PermissionError, OSError):
         return None
 
 
-def revision_of(rel):
-    """Blob id of this path in the current commit, or None."""
-    p = subprocess.run(["git", "rev-parse", f"HEAD:{rel}"], cwd=WS,
-                       capture_output=True, text=True)
+def git(*args):
+    p = subprocess.run(["git", *args], cwd=WS, capture_output=True, text=True)
     return p.stdout.strip() or None
+
+
+def revision_of(rel):
+    return git("rev-parse", f"HEAD:{rel}")
 
 
 def commit_id():
-    p = subprocess.run(["git", "rev-parse", "HEAD"], cwd=WS, capture_output=True, text=True)
-    return p.stdout.strip() or None
+    return git("rev-parse", "HEAD")
+
+
+def branch():
+    return git("rev-parse", "--abbrev-ref", "HEAD")
 
 
 def task_path(sid):
@@ -98,7 +202,6 @@ def save_task(sid, m):
 
 
 def foreign_evidence(path, own_sid):
-    """Newest observation of `path` recorded by some other task, if any."""
     best = None
     if not os.path.isdir(TASKS):
         return None
@@ -114,16 +217,48 @@ def foreign_evidence(path, own_sid):
 
 
 def emit(kind, **kw):
+    """Append one line to the event log. Kept in the readable shape every recorded
+    store already uses (plain json.dumps); receipts use canonical JSON instead."""
     os.makedirs(STORE, exist_ok=True)
     with open(EVENTS, "a", encoding="utf-8") as fh:
         fh.write(json.dumps({"at": now(), "event": kind, **kw}, sort_keys=True) + "\n")
 
 
-def receipt(**kw):
-    r = {"at": now(), **kw}
-    r["receipt"] = digest(json.dumps(r, sort_keys=True, separators=(",", ":")).encode())
-    emit("verdict", **r)
-    return r
+def latency_ms():
+    return int(round((time.time() - STARTED) * 1000))
+
+
+def write_receipt(**kw):
+    """Persist one immutable receipt file with the full field set, and chain it to the
+    previous receipt by hash. Returns the receipt as stored."""
+    os.makedirs(RECEIPTS, exist_ok=True)
+    existing = sorted(f for f in os.listdir(RECEIPTS) if f.endswith(".json"))
+    previous_hash = None
+    if existing:
+        with open(os.path.join(RECEIPTS, existing[-1]), encoding="utf-8") as fh:
+            previous_hash = json.load(fh).get("receipt_hash")
+    body = {
+        "timestamp": now(),
+        "repository": os.path.abspath(WS),
+        "branch": branch(),
+        "git_head": commit_id(),
+        "exit_code": kw.pop("exit_code", 0),
+        "runtime_latency_ms": latency_ms(),
+        "previous_receipt_hash": previous_hash,
+        **kw,
+    }
+    # receipt_id is derived from the content before it is added, receipt_hash from
+    # the content after: verification is one local recomputation over the file
+    # minus receipt_hash, and the id prefix matches the stored file name.
+    seq = len(existing)
+    body["seq"] = seq
+    seed = digest(canon(body).encode())[:12]
+    body["receipt_id"] = f"rcpt_{seq:05d}_{seed}"
+    body["receipt_hash"] = digest(canon(body).encode())
+    with open(os.path.join(RECEIPTS, f"{seq:05d}_{body['receipt_hash'][:12]}.json"), "w",
+              encoding="utf-8") as fh:
+        json.dump(body, fh, indent=2, sort_keys=True)
+    return body
 
 
 def read_events():
@@ -138,8 +273,6 @@ def read_events():
 
 
 def export(sid):
-    """Write one hashed evidence record per task: what it observed, what it ran,
-    what was refused. Real records only."""
     events = read_events()
     d = os.path.join(STORE, "exports")
     os.makedirs(d, exist_ok=True)
@@ -153,9 +286,7 @@ def export(sid):
         m = load_task(task)
         verdicts = [e for e in events if e.get("event") == "verdict" and e.get("task") == task]
         rec = {
-            "task": task,
-            "commit": m.get("commit"),
-            "opened_at": m.get("opened_at"),
+            "task": task, "commit": m.get("commit"), "opened_at": m.get("opened_at"),
             "implicit": m.get("implicit"),
             "observations": sorted(
                 ({"path": p, "digest": v.get("digest"), "via": v.get("via", "direct"),
@@ -170,7 +301,7 @@ def export(sid):
                           "path": v.get("path"), "codes": v.get("codes"),
                           "receipt": v.get("receipt")} for v in verdicts],
         }
-        rec["record_hash"] = digest(json.dumps(rec, sort_keys=True).encode())
+        rec["record_hash"] = digest(canon(rec).encode())
         with open(os.path.join(d, f"{task}.json"), "w", encoding="utf-8") as fh:
             json.dump(rec, fh, indent=2, sort_keys=True)
         written.append(f"{task}.json")
@@ -190,6 +321,79 @@ def refuse(code, lines):
 def admit(note):
     print(json.dumps({"verdict": "ADMITTED", "note": note}))
     return 0
+
+
+def decide(sid, tool, inp, path, outside):
+    """The deterministic verdict. Returns a dict; writes nothing."""
+    m = load_task(sid)
+    if m is None:
+        return {"verdict": "REFUSED", "codes": ["NO_MANIFEST"], "path": path,
+                "held": None, "current": None}
+    if outside:
+        return {"verdict": "REFUSED", "codes": ["OUTSIDE_WORKSPACE"], "path": path,
+                "held": None, "current": None}
+    live = [c for c in m.get("contradictions", []) if c["task"] == sid]
+    if live:
+        return {"verdict": "REFUSED", "codes": ["COMMAND_RESULT_CHANGED"], "path": path,
+                "held": live[0]["was"], "current": live[0]["now"],
+                "command": live[0]["command"]}
+    if not path:
+        return {"verdict": "ADMITTED", "codes": [], "path": None, "held": None,
+                "current": None, "note": "no contradicted command evidence"}
+    sub = inp.get("subtask")
+    if sub:
+        rec = m["files"].get(path)
+        if not rec or rec.get("via") != f"subagent:{sub}":
+            return {"verdict": "REFUSED", "codes": ["UNSUPPORTED_SUBTASK_EVIDENCE"],
+                    "path": path, "held": None, "current": None, "subtask": sub}
+    reasons = []
+    own = m["files"].get(path)
+    if own is None:
+        foreign = foreign_evidence(path, sid)
+        if foreign:
+            other, _ = foreign
+            reasons.append(("CROSS_TASK_EVIDENCE", None, None,
+                            "the only recorded evidence for this path belongs to "
+                            f"another task ({other})"))
+        elif REQUIRE_PRIOR_READ:
+            return {"verdict": "REFUSED", "codes": ["UNVERIFIED_TARGET"], "path": path,
+                    "held": None, "current": None}
+    else:
+        current = file_digest(path)
+        if current != own["digest"]:
+            reasons.append(("EVIDENCE_SUPERSEDED", own["digest"], current,
+                            "the file changed after this task observed it"))
+        rev_now = revision_of(path)
+        if own.get("revision") and rev_now and rev_now != own["revision"]:
+            reasons.append(("REVISION_MOVED", own["revision"], rev_now,
+                            "this path was committed at a different revision after the "
+                            "task observed it"))
+    if not reasons:
+        held = own["digest"] if own else None
+        return {"verdict": "ADMITTED", "codes": [], "path": path, "held": held,
+                "current": file_digest(path) if own else None,
+                "note": "evidence current"}
+    return {"verdict": "REFUSED", "codes": [r[0] for r in reasons], "path": path,
+            "held": reasons[0][1], "current": reasons[0][2],
+            "reasons": [{"code": c, "held": a, "current": b, "why": w}
+                        for c, a, b, w in reasons]}
+
+
+def persist_verdict(decision, sid, tool, inp, path):
+    args = redact(inp)
+    kind, why = classify(tool, inp)
+    r = write_receipt(
+        session_id=sid, tool_name=tool, tool_classification=kind,
+        classification_reason=why, tool_arguments=args,
+        tool_arguments_hash=digest(canon(inp).encode()),
+        affected_paths=[path] if path else [],
+        evidence_hashes={path: decision.get("held")} if path else {},
+        current_hashes={path: decision.get("current")} if path else {},
+        verdict=decision["verdict"], reason_code=(decision["codes"] or ["NONE"])[0],
+        reason_codes=decision["codes"], reason_detail=decision.get("reasons", []),
+        exit_code=2 if decision["verdict"] == "REFUSED" else 0,
+    )
+    return r
 
 
 def main():
@@ -219,16 +423,17 @@ def main():
     if mode == "session-start":
         existing = load_task(sid)
         if existing is not None:
-            # a resumed task must not lose the evidence it already holds
             existing["resumed_at"] = now()
             save_task(sid, existing)
-            emit("manifest_resumed", task=sid,
+            emit("manifest_resumed", task=sid, observations=len(existing.get("files") or {}))
+            emit("session_started", task=sid, resumed=True,
                  observations=len(existing.get("files") or {}))
             return admit("manifest resumed, evidence preserved")
         m = {"task": sid, "commit": commit_id(), "opened_at": now(),
              "implicit": False, "files": {}, "commands": {}, "contradictions": []}
         save_task(sid, m)
         emit("manifest_opened", task=sid, commit=m["commit"])
+        emit("session_started", task=sid, resumed=False, commit=m["commit"])
         return admit("manifest opened")
 
     if mode == "probe":
@@ -239,7 +444,7 @@ def main():
         rel = os.path.join(".countersign", "payloads", f"{n:04d}_{ev}.json")
         with open(os.path.join(WS, rel), "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2, sort_keys=True)
-        emit("payload_probed", file=rel, event=payload.get("event"), tool=payload.get("tool"))
+        emit("payload_probed", file=rel, event=ev, tool=tool)
         return admit(f"payload recorded at {rel}")
 
     m = load_task(sid)
@@ -250,6 +455,7 @@ def main():
                  "implicit": True, "files": {}, "commands": {}, "contradictions": []}
             save_task(sid, m)
             emit("manifest_implicit", task=sid)
+            emit("session_started", task=sid, resumed=False, implicit=True)
         if tool in ("execute_command", "run_command", "shell", "bash", "terminal"):
             cmd = inp.get("command") or ""
             d = digest(str(inp.get("output", "")).encode())
@@ -263,108 +469,146 @@ def main():
             sub = inp.get("subtask") or payload.get("subagent_id")
             via = f"subagent:{sub}" if sub else "direct"
             m["files"][path] = {"digest": file_digest(path), "at": now(), "task": sid,
-                                "via": via, "revision": revision_of(path)}
+                                "via": via, "revision": revision_of(path),
+                                "verified_at": now()}
             emit("evidence_recorded", path=path, digest=m["files"][path]["digest"],
                  task=sid, via=via)
+            emit("file_read", task=sid, path=path, digest=m["files"][path]["digest"])
+            emit("evidence_created", task=sid, path=path)
         save_task(sid, m)
         return admit("evidence recorded")
 
     if mode == "export":
         return export(sid)
 
+    if mode == "refresh":
+        """Re-hash the evidence this task holds and update the manifest. This is the
+        recovery action the refusal tells the operator to take, and it really mutates
+        the store."""
+        if m is None:
+            sys.stderr.write("no manifest to refresh for this task\n")
+            return 2
+        target = path if raw else None
+        refreshed, removed = [], []
+        for p in sorted(m.get("files") or {}):
+            if target and p != target:
+                continue
+            d = file_digest(p)
+            if d is None:
+                removed.append(p)
+                emit("evidence_missing", task=sid, path=p)
+                m["files"].pop(p, None)
+                continue
+            m["files"][p].update({"digest": d, "at": now(), "task": sid,
+                                  "revision": revision_of(p), "verified_at": now()})
+            refreshed.append({"path": p, "digest": d})
+        m["contradictions"] = [c for c in m.get("contradictions", []) if c["task"] != sid]
+        m["refreshed_at"] = now()
+        save_task(sid, m)
+        emit("evidence_refreshed", task=sid, paths=[r["path"] for r in refreshed],
+             removed=removed)
+        print(json.dumps({"verdict": "REFRESHED", "session_id": sid,
+                          "refreshed": refreshed, "removed": removed}))
+        return 0
+
+    if mode == "recheck":
+        """Dry run: same deterministic decision, nothing written."""
+        d = decide(sid, tool, inp, path, outside)
+        d["latency_ms"] = latency_ms()
+        d["session_id"] = sid
+        d["tool_name"] = tool
+        d["dry_run"] = True
+        print(json.dumps(d, sort_keys=True))
+        return 2 if d["verdict"] == "REFUSED" else 0
+
     if mode != "check":  # unknown modes must fail closed, never raise
         sys.stderr.write(f"unknown mode: {mode!r}\n")
         return 2
 
+    kind, why = classify(tool, inp)
+    emit("tool_intercepted", task=sid, tool=tool, classification=kind,
+         classification_reason=why, path=path or None)
+
     if m is None:
+        r = write_receipt(session_id=sid, tool_name=tool, tool_classification=kind,
+                          classification_reason=why, tool_arguments=redact(inp),
+                          tool_arguments_hash=digest(canon(inp).encode()),
+                          affected_paths=[path] if path else [], evidence_hashes={},
+                          current_hashes={}, verdict="REFUSED", reason_code="NO_MANIFEST",
+                          reason_codes=["NO_MANIFEST"], exit_code=2)
+        emit("evidence_checked", task=sid, verdict="REFUSED", codes=["NO_MANIFEST"])
+        emit("tool_refused", task=sid, tool=tool, path=path or None,
+             codes=["NO_MANIFEST"], receipt=r["receipt_hash"])
         return refuse("NO_MANIFEST",
                       ["No evidence manifest exists for this task.",
                        f"Expected it at {task_path(sid)}.",
                        "Nothing this task relies on has been recorded, so nothing can be "
-                       "verified. Fail closed."])
+                       "verified. Fail closed.",
+                       f"Refusal receipt: {r['receipt_hash']}"])
 
-    if outside:
-        r = receipt(task=sid, path=path, verdict="REFUSED", codes=["OUTSIDE_WORKSPACE"])
-        return refuse("OUTSIDE_WORKSPACE",
-                      [f"The proposed action targets {path}, outside the workspace {WS}.",
-                       "No evidence can exist for a path this gate never observes, so the",
-                       "action cannot be verified.",
-                       "Required recovery: run the action inside the workspace, or record",
-                       "the path explicitly.",
-                       f"Refusal receipt: {r['receipt']}"])
+    decision = decide(sid, tool, inp, path, outside)
+    r = persist_verdict(decision, sid, tool, inp, path)
+    emit("verdict", task=sid, path=path or None, verdict=decision["verdict"],
+         codes=decision["codes"], receipt=r["receipt_hash"],
+         evidence_digest=decision.get("held"))
+    emit("receipt_created", receipt=r["receipt_hash"], receipt_id=r["receipt_id"],
+         task=sid, verdict=decision["verdict"])
+    emit("evidence_checked", task=sid, verdict=decision["verdict"],
+         codes=decision["codes"], latency_ms=r["runtime_latency_ms"],
+         held=decision.get("held"), current=decision.get("current"), path=path or None)
 
-    live = [c for c in m.get("contradictions", []) if c["task"] == sid]
-    if live:
-        c = live[0]
-        r = receipt(task=sid, path=path, verdict="REFUSED", codes=["COMMAND_RESULT_CHANGED"])
-        return refuse("COMMAND_RESULT_CHANGED",
-                      [f"This task holds a contradicted result for `{c['command']}`.",
-                       f"  observed {c['was'][:12]} -> now {c['now'][:12]}",
-                       "A state-changing call cannot proceed on a result that changed "
-                       "underneath the task.",
-                       "Required recovery: reopen the task and rerun the affected commands.",
-                       f"Refusal receipt: {r['receipt']}"])
+    if decision["verdict"] == "ADMITTED":
+        emit("tool_allowed", task=sid, tool=tool, path=path or None,
+             receipt=r["receipt_hash"])
+        return admit(f"evidence current, receipt {r['receipt_hash'][:12]}")
 
-    if not path:
-        emit("command_attempted", task=sid, command=inp.get("command") or "")
-        return admit("no contradicted command evidence in this task")
-
-    sub = inp.get("subtask") or payload.get("subagent_id")
-    if sub:
-        rec = m["files"].get(path)
-        if not rec or rec.get("via") != f"subagent:{sub}":
-            r = receipt(task=sid, path=path, verdict="REFUSED",
-                        codes=["UNSUPPORTED_SUBTASK_EVIDENCE"])
-            return refuse("UNSUPPORTED_SUBTASK_EVIDENCE",
-                          [f"The proposed change to {path} is attributed to subtask {sub}.",
-                           "No observation of that path by that subtask is on record.",
-                           "The conclusion arrived without evidence behind it.",
-                           "Required recovery: let the subtask observe the path, or "
-                           "re-observe it in this task.",
-                           f"Refusal receipt: {r['receipt']}"])
-
-    reasons, own = [], m["files"].get(path)
-    if own is None:
-        foreign = foreign_evidence(path, sid)
-        if foreign:
-            other, rec = foreign
-            reasons.append(("CROSS_TASK_EVIDENCE", other, sid,
-                            "the only recorded evidence for this path belongs to another task"))
-        elif REQUIRE_PRIOR_READ:
-            return refuse("UNVERIFIED_TARGET",
-                          [f"{path} has never been observed by any task.",
-                           "Policy requires prior observation before a state-changing call."])
-        else:
-            emit("write_without_evidence", task=sid, path=path)
-            return admit("no recorded evidence for this path")
+    emit("tool_refused", task=sid, tool=tool, path=path or None,
+         codes=decision["codes"], receipt=r["receipt_hash"])
+    code = decision["codes"][0]
+    lines = []
+    if code == "OUTSIDE_WORKSPACE":
+        lines = [f"The proposed action targets {path}, outside the workspace {WS}.",
+                 "No evidence can exist for a path this gate never observes, so the",
+                 "action cannot be verified.",
+                 "Required recovery: run the action inside the workspace, or record the",
+                 "path explicitly."]
+    elif code == "COMMAND_RESULT_CHANGED":
+        c = decision
+        lines = [f"This task holds a contradicted result for `{c.get('command')}`.",
+                 f"  observed {str(c['held'])[:12]} -> now {str(c['current'])[:12]}",
+                 "A state-changing call cannot proceed on a result that changed "
+                 "underneath the task.",
+                 "Required recovery: reopen the task and rerun the affected commands."]
+    elif code == "UNSUPPORTED_SUBTASK_EVIDENCE":
+        lines = [f"The proposed change to {path} is attributed to subtask "
+                 f"{decision.get('subtask')}.",
+                 "No observation of that path by that subtask is on record.",
+                 "The conclusion arrived without evidence behind it.",
+                 "Required recovery: let the subtask observe the path, or re-observe it "
+                 "in this task."]
+    elif code == "UNVERIFIED_TARGET":
+        lines = [f"{path} has never been observed by any task.",
+                 "Policy requires prior observation before a state-changing call."]
+    elif code == "CROSS_TASK_EVIDENCE":
+        lines = [f"About to modify {path}.",
+                 "The only recorded evidence for this path belongs to another task.",
+                 "A different task's observation is not this task's evidence.",
+                 "Required recovery: observe the path in this task, then retry."]
     else:
-        current = file_digest(path)
-        if current != own["digest"]:
-            reasons.append(("EVIDENCE_SUPERSEDED", own["digest"], current,
-                            "the file changed after this task observed it"))
-        rev_now = revision_of(path)
-        if own.get("revision") and rev_now and rev_now != own["revision"]:
-            reasons.append(("REVISION_MOVED", own["revision"], rev_now,
-                            "this path was committed at a different revision after the "
-                            "task observed it"))
-
-    if not reasons:
-        r = receipt(task=sid, path=path, verdict="ADMITTED", evidence_digest=own["digest"])
-        return admit(f"evidence current, receipt {r['receipt'][:12]}")
-
-    lines = [f"About to modify {path}."]
-    if own:
+        lines = [f"About to modify {path}."]
         cur = file_digest(path)
-        lines.append(f"Evidence this task holds: {str(own['digest'])[:12]}.")
-        lines.append(f"Digest on disk now: {str(cur)[:12] if cur else 'file missing'}.")
-    for code, was, isnow, why in reasons:
-        lines.append(f"  {code}: {str(was)[:12]} -> {str(isnow)[:12]} ({why})")
-    lines += ["Required recovery:", "  1. open a fresh task",
-              f"  2. re-observe {path}", "  3. rerun the affected commands",
-              "  4. record the new evidence manifest"]
-    r = receipt(task=sid, path=path, verdict="REFUSED", codes=[x[0] for x in reasons])
-    lines.append(f"Refusal receipt: {r['receipt']}")
-    return refuse(reasons[0][0], lines)
+        if decision.get("held"):
+            lines.append(f"Evidence this task holds: {str(decision['held'])[:12]}.")
+            lines.append(f"Digest on disk now: {str(cur)[:12] if cur else 'file missing'}.")
+        for x in decision.get("reasons", []):
+            lines.append(f"  {x['code']}: {str(x['held'])[:12]} -> {str(x['current'])[:12]}"
+                         f" ({x['why']})")
+        lines += ["Required recovery:", "  1. open a fresh task",
+                  f"  2. re-observe {path}", "  3. rerun the affected commands",
+                  "  4. record the new evidence manifest"]
+    lines.append(f"Refusal receipt: {r['receipt_hash']}")
+    lines.append(f"Receipt id: {r['receipt_id']} | latency {r['runtime_latency_ms']} ms")
+    return refuse(code, lines)
 
 
 if __name__ == "__main__":

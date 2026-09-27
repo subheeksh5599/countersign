@@ -61,6 +61,14 @@ fi
 python3 - "$WS" <<'PY'
 import json, os, sys
 ws = sys.argv[1]
+# If a machine-wide block is already installed, this workspace block makes two gates
+# observe the same call: two checks, two receipts. Say so rather than let it surprise
+# an operator reading the receipt log.
+g = os.path.expanduser("~/.bob/settings/settings.json")
+if os.path.exists(g) and "countersign" in open(g, encoding="utf-8").read():
+    print("warning: ~/.bob/settings/settings.json already has a countersign hook block.")
+    print("         with this workspace block as well, every state-changing call is")
+    print("         checked twice and writes two receipts. install one, not both.")
 path = os.path.join(ws, ".bob", "settings.json")
 os.makedirs(os.path.dirname(path), exist_ok=True)
 cur = json.load(open(path)) if os.path.exists(path) else {}

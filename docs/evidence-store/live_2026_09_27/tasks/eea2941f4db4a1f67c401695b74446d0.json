@@ -1,0 +1,19 @@
+{
+  "commands": {},
+  "commit": "6138eb60d1becbf70f06525aa356ad27a28634cc",
+  "contradictions": [],
+  "files": {
+    "pricing.ts": {
+      "at": "2026-09-27T07:37:43Z",
+      "digest": "5db23dc826cf874a98eb3de4a59017b55304972bc051bc655da45640fd7bab35",
+      "revision": "7e9b344455d49540975b306b4ac5da2d76893c6a",
+      "task": "eea2941f4db4a1f67c401695b74446d0",
+      "verified_at": "2026-09-27T07:37:43Z",
+      "via": "direct"
+    }
+  },
+  "implicit": false,
+  "opened_at": "2026-09-27T07:37:17Z",
+  "resumed_at": "2026-09-27T07:37:17Z",
+  "task": "eea2941f4db4a1f67c401695b74446d0"
+}
