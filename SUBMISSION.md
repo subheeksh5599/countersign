@@ -136,9 +136,14 @@ occupied.
   acts on evidence it did not refresh. Staging that moment uses a labelled harness
   that writes the path inside the read -> write window.
 - Enforcement is local to the machine running the runtime. Someone who controls that
-  machine can remove the hook. Organisation-wide enforcement is the runtime's own
-  enforced-hooks mechanism, and the exported receipts are the piece a CI job would
-  check server-side; that CI check is roadmap, not shipped.
+  machine can remove the hook, and an edit on an unguarded machine is not stopped by
+  another machine's receipts. What is shipped is the check that does not need the original
+  machine: `countersign replay` re-derives every stored verdict from the inputs the
+  receipt itself recorded, and `.github/workflows/replay.yml` runs it on every push and
+  then forges a verdict and asserts the replay fails (`scripts/forge_a_verdict.py`).
+  Organisation-wide enforcement as the default is the remaining piece, alongside separating
+  per-subagent manifests; the replay is not roadmap, it is in the repository and green in
+  CI.
 - The evidence store is a file: tamper-evident only if you commit the event log or
   export records outside the workspace. It is not signed by a third party.
 
@@ -148,8 +153,22 @@ occupied.
 git clone https://github.com/subheeksh5599/countersign && cd countersign
 python3 tests/test_gate.py      # 15 behaviour cases
 python3 tests/test_matrix.py    # 500 cases
+python3 tests/test_receipts.py  # 16 receipt, chain, redaction, policy and replay cases
 sh install.sh --global          # machine-wide gate, CLI, hook block
 ```
 
 Then run one task, change the file it read, and attempt the edit: the refusal, the
 exit code, the receipt and the diff are all visible.
+
+Two more, both self-contained and neither needing a key or a network:
+
+```sh
+sh run.sh          # runtime on 4319, console on 4311
+python3 scripts/acceptance.py     # 21 steps against that live runtime, on a fresh repository
+```
+
+Open `http://127.0.0.1:4311/console` and press "run agent turn" with the second writer
+ticked: a real agent reads a file, a real second process rewrites it, and the attempt comes
+back exit 2 with the receipt it wrote. The receipts page has "replay receipts", which
+re-derives every stored verdict from its own recorded inputs. The same replay runs in CI:
+`.github/workflows/replay.yml`, which also forges a verdict and asserts the replay fails.

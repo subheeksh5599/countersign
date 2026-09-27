@@ -225,8 +225,12 @@ agent sends and keeps the exit code the process returned.
 - Subagent digests: a subagent's observations arrive through the parent's tool results, so
   per-subagent manifests are not separated.
 - Enforcement reach: the hook is installed per workspace or per machine, so a repository
-  guarded on one machine is not guarded on another. The receipts are the artefact a CI job
-  would verify, and that server side replay is not built.
+  guarded on one machine is not guarded on another while the agent runs there. What the
+  machine cannot do is hide a verdict: `countersign replay` re-derives every stored receipt
+  from its own recorded inputs on any machine that has the receipts and the repository, and
+  `.github/workflows/replay.yml` runs that on every push, then forges a verdict and asserts
+  the replay fails. What is not built is organisation-wide enforcement as the default; the
+  replay checks verdicts, it does not stop an edit on a machine that has no hook.
 - Nothing here reads a vendor private API: the gate consumes the public hook payload plus
   the workspace itself.
 

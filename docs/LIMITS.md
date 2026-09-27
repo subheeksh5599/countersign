@@ -45,4 +45,11 @@ checked twice and produces two receipts.
 
 A change that exists only on another machine is invisible to a local check. The multi
 developer scene shows the boundary: the edit is admitted before the fetch and refused after
-it. Closing that gap needs the receipts replayed on a server, which is not built.
+it.
+
+What closes part of the gap is shipped. `countersign replay` takes the receipts and the
+repository and re-derives every verdict from the inputs the receipt itself recorded, so a
+machine that never ran the gate can check that a verdict was reached rather than typed.
+`.github/workflows/replay.yml` runs it on every push and then forges a verdict and asserts
+the replay fails. What that does not do is stop an edit on a machine with no hook: the
+replay audits verdicts, it does not enforce across machines. See `docs/CI.md`.
