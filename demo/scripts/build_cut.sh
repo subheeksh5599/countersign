@@ -4,16 +4,16 @@
 #
 #   sh demo/scripts/build_cut.sh
 #
-# Output: demo/media/countersign-demo.mp4   (intro + recording, narrated)
+# Output: docs/media/countersign-demo.mp4   (intro + recording, narrated)
 #         /tmp/csign_cut.mp4                (recording only, no narration)
 #
 # The kept segments are listed in demo/NARRATION.md with what was removed and why. Every
 # trim is a real source range; there is no re-staging and no re-encode of the source.
 set -e
 SRC="${SRC:-/home/arch/Videos/recording_2026-09-27_14.35.18.mp4}"
-INTRO="${INTRO:-/home/arch/countersign/demo/media/intro-silent.mp4}"
+INTRO="${INTRO:-/home/arch/countersign/docs/media/intro-silent.mp4}"
 TTS="${TTS:-/tmp/csign_tts}"
-OUT="${OUT:-/home/arch/countersign/demo/media}"
+OUT="${OUT:-/home/arch/countersign/docs/media}"
 W=1364
 H=766
 FPS=30

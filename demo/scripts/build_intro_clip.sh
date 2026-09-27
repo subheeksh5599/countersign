@@ -3,10 +3,10 @@
 #
 #   sh demo/scripts/build_intro_clip.sh
 #
-# Output: demo/media/countersign-intro.mp4 — the rendered composition with its five lines.
+# Output: docs/media/countersign-intro.mp4 — the rendered composition with its five lines.
 set -e
 TTS="${TTS:-/tmp/csign_tts}"
-OUT="${OUT:-/home/arch/countersign/demo/media}"
+OUT="${OUT:-/home/arch/countersign/docs/media}"
 
 python3 - "$TTS" "$OUT/intro-silent.mp4" "$OUT/countersign-intro.mp4" <<'PY'
 import os, subprocess, sys

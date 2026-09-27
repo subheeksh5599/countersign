@@ -84,7 +84,6 @@ console that holds no sample data) driving the same gate command the agent's hoo
 - [x] Not-proven list written for the form itself, in the same breath as the win →
       `SUBMISSION.md`, mirrored in `docs/LIMITS.md`
 - [x] Paste-ready submission text for every form field → `SUBMISSION.md`
-- [ ] Record the five-minute video using `VIDEO.md` (the user records this)
 
 ## E. Optional
 - [x] Second refusal scene: a destructive command refused while a recorded result is

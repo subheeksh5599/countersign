@@ -72,14 +72,15 @@ workspace. Nothing in the adjacent space answers that, and the prior art in
 databases and build systems is concurrency control, not an agent boundary.
 
 ## Roadmap
-1. Hooks in one workspace, the two-task scene, filmed. (gate built; wiring pending
-   a licensed install)
+1. Hooks installed per workspace and per machine, the two-task scene recorded, the
+   demo filmed and published. (done; nothing here has run inside a licensed
+   desktop install, which is the one install path not exercised)
 2. Subagent evidence separated per subtask, with the parent refusing claims that
    have no observation behind them. (implemented; payload shape to confirm)
 3. Organisational enforcement: the hook block shipped as a policy, so every
    developer's workspace refuses stale evidence by default.
-4. Evidence records as an exportable artifact: one page per task, hashed, for
-   review and incident postmortems.
+4. Evidence records as an exportable artifact: one hashed page per task for review
+   and incident postmortems. (built: `countersign export`, rendered by `lens.py`)
 5. Extend the same gate to other state-changing surfaces the runtime exposes,
    including commands with external effects.
 

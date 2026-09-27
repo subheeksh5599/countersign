@@ -12,7 +12,7 @@
 #      transfer chrome, the static record page, an error page)
 #   6  the voice is male: median F0 of the delivered audio, 100-130 Hz is the adult band
 set -e
-MEDIA="${1:-/home/arch/countersign/demo/media}"
+MEDIA="${1:-/home/arch/countersign/docs/media}"
 DEMO="$MEDIA/countersign-demo.mp4"
 [ -s "$DEMO" ] || { echo "missing $DEMO" >&2; exit 1; }
 work=$(mktemp -d)

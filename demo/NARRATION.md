@@ -1,7 +1,7 @@
 # Narration — Countersign demo
 
-Delivered: `demo/media/countersign-demo.mp4` — **71.6s**, 1364x766, 30fps, male voice.
-Standalone intro for a social post: `demo/media/countersign-intro.mp4` — **26.5s**.
+Delivered: `docs/media/countersign-demo.mp4` — **71.6s**, 1364x766, 30fps, male voice.
+Standalone intro for a social post: `docs/media/countersign-intro.mp4` — **26.5s**.
 Source recording: `/home/arch/Videos/recording_2026-09-27_14.35.18.mp4` (122.6s, silent, VFR).
 Intro composition: `demo/intro/` (hyperframes, 1920x1080, rendered then scaled to the recording).
 
@@ -77,8 +77,8 @@ Same line, three voices, to pick from — `demo/media/voice-samples/`:
 
 ```sh
 sh demo/scripts/build_narration.sh      # 12 lines of speech
-sh demo/scripts/build_cut.sh            # cut + narration -> demo/media/countersign-demo.mp4
-sh demo/scripts/build_intro_clip.sh     # the standalone intro -> demo/media/countersign-intro.mp4
+sh demo/scripts/build_cut.sh            # cut + narration -> docs/media/countersign-demo.mp4
+sh demo/scripts/build_intro_clip.sh     # the standalone intro -> docs/media/countersign-intro.mp4
 sh demo/scripts/verify_cut.sh           # fails loudly, see below
 ```
 
