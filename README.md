@@ -127,6 +127,27 @@ reviewer can see which operation was intercepted and what it was aimed at. Verif
 test: a payload carrying an API key, an authorization header and a password leaves none of
 the three anywhere in the receipt file.
 
+## ▶ The demo
+
+[![The console refusing an edit whose evidence moved](demo/media/countersign-demo-poster.png)](https://youtu.be/REPLACE_WITH_YOUTUBE_ID)
+
+**72.8s, narrated.** A 26.5s intro, then one real agent turn refused in the console, the record
+it leaves (evidence per session, intercepted calls, receipts), and the receipt replay.
+Committed at `demo/media/countersign-demo.mp4`, so it survives the video host.
+The intro alone, for a social post: `demo/media/countersign-intro.mp4`.
+
+Rebuild it from a fresh recording with the shipped scripts:
+
+```sh
+sh demo/scripts/build_narration.sh      # the 12 lines, measured
+sh demo/scripts/build_cut.sh            # cut + narration
+sh demo/scripts/build_intro_clip.sh     # the standalone intro
+sh demo/scripts/verify_cut.sh           # fails loudly if anything drifted
+```
+
+What is kept, what is cut and why, and where every line lands: `demo/NARRATION.md`.
+The click list for the recording: `demo/CLICKS.md`.
+
 ## Measured cost of a decision
 
 308 ms for a check against a manifest holding 200 observations, including the git commit

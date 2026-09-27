@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Geist";
+        src: url("assets/geist.woff2") format("woff2");
+        font-weight: 100 900;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Geist Mono";
+        src: url("assets/geist-mono.woff2") format("woff2");
+        font-weight: 100 900;
+        font-display: block;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #f9f9f9;
+      }
+      body {
+        font-family: "Geist", sans-serif;
+        color: #262626;
+      }
+
+      #root {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        background: #f9f9f9;
+        background-image: linear-gradient(to right, #ececec 1px, transparent 1px),
+          linear-gradient(to bottom, #ececec 1px, transparent 1px);
+        background-size: 96px 96px;
+      }
+
+      .clip {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0 160px;
+      }
+
+      .kicker {
+        font-family: "Geist Mono", monospace;
+        font-size: 21px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #c93a00;
+        margin-bottom: 34px;
+      }
+      .head {
+        font-size: 82px;
+        font-weight: 600;
+        line-height: 1.08;
+        letter-spacing: -0.035em;
+        color: #262626;
+        max-width: 1500px;
+      }
+      .head-sm {
+        font-size: 62px;
+        font-weight: 600;
+        line-height: 1.12;
+        letter-spacing: -0.03em;
+        max-width: 1560px;
+      }
+      .line {
+        display: block;
+      }
+      .sub {
+        font-size: 30px;
+        line-height: 1.5;
+        color: #616161;
+        margin-top: 30px;
+        max-width: 1180px;
+      }
+
+      .card {
+        margin-top: 52px;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 30px 38px;
+        display: inline-flex;
+        flex-direction: column;
+        gap: 14px;
+        align-self: flex-start;
+      }
+      .row {
+        display: flex;
+        align-items: baseline;
+        gap: 26px;
+        font-family: "Geist Mono", monospace;
+        font-size: 27px;
+      }
+      .row .label {
+        color: #727272;
+        min-width: 330px;
+      }
+      .row .val {
+        color: #262626;
+      }
+      .diff {
+        color: #ff4d00;
+      }
+      .chip {
+        font-family: "Geist Mono", monospace;
+        font-size: 26px;
+        padding: 16px 26px;
+        border-radius: 999px;
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+      }
+      .chip.held {
+        color: #616161;
+      }
+      .chip.disk {
+        color: #262626;
+        border-color: #ff4d00;
+        background: #fcddcc;
+      }
+      .neq {
+        font-size: 40px;
+        color: #ff4d00;
+        padding: 0 18px;
+      }
+
+      .stamp {
+        align-self: flex-start;
+        background: #ffffff;
+        border: 1px solid #ff4d00;
+        border-radius: 16px;
+        padding: 34px 44px;
+        display: flex;
+        align-items: center;
+        gap: 40px;
+      }
+      .stamp .exit {
+        font-family: "Geist Mono", monospace;
+        font-size: 30px;
+        color: #c93a00;
+        letter-spacing: 0.08em;
+      }
+      .stamp .verdict {
+        font-size: 68px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: #262626;
+      }
+      .stamp .code {
+        font-family: "Geist Mono", monospace;
+        font-size: 26px;
+        color: #c93a00;
+      }
+      .brand {
+        font-size: 128px;
+        font-weight: 600;
+        letter-spacing: -0.045em;
+        line-height: 1;
+      }
+      .brand-line {
+        font-size: 34px;
+        color: #616161;
+        margin-top: 26px;
+      }
+      .url {
+        font-family: "Geist Mono", monospace;
+        font-size: 26px;
+        color: #727272;
+        margin-top: 40px;
+      }
+      .dot {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        background: #ff4d00;
+        margin-right: 16px;
+        vertical-align: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="26.5"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- S1: the read -->
+      <div class="clip" id="s1" data-start="0" data-duration="5.2" data-track-index="1">
+        <div class="kicker" id="s1-k"><span class="dot"></span>Evidence identity</div>
+        <div class="head" id="s1-h">
+          <span class="line">An agent acts on</span>
+          <span class="line">what it already read.</span>
+        </div>
+        <div class="card" id="s1-c">
+          <div class="row">
+            <span class="label">src/config.ts</span>
+            <span class="val">a18eab58a1c1</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- S2: the file moves -->
+      <div class="clip" id="s2" data-start="5.2" data-duration="5.0" data-track-index="2">
+        <div class="kicker" id="s2-k"><span class="dot"></span>The file moved after the read</div>
+        <div class="card" id="s2-c">
+          <div class="row" id="s2-r1">
+            <span class="label">held by the task</span>
+            <span class="val">a18eab58a1c1</span>
+          </div>
+          <div class="row" id="s2-r2">
+            <span class="label">on disk now</span>
+            <span class="val">2458<span class="diff">a1b9afcb</span></span>
+          </div>
+        </div>
+        <div class="sub" id="s2-s">
+          Nothing announced it. The task keeps reading from the older text.
+        </div>
+      </div>
+
+      <!-- S3: the comparison -->
+      <div class="clip" id="s3" data-start="10.2" data-duration="6.0" data-track-index="3">
+        <div class="kicker" id="s3-k"><span class="dot"></span>Before every state-changing call</div>
+        <div class="head-sm" id="s3-h">
+          <span class="line">Countersign compares what the task holds</span>
+          <span class="line">with the repository as it is now.</span>
+        </div>
+        <div class="card" id="s3-c" style="flex-direction: row; align-items: center; gap: 26px">
+          <span class="chip held">held&nbsp;&nbsp;a18eab58a1c1</span>
+          <span class="neq">&ne;</span>
+          <span class="chip disk">disk&nbsp;&nbsp;2458a1b9afcb</span>
+        </div>
+      </div>
+
+      <!-- S4: the refusal -->
+      <div class="clip" id="s4" data-start="16.2" data-duration="4.2" data-track-index="4">
+        <div class="stamp" id="s4-stamp">
+          <span class="exit">exit 2</span>
+          <span class="verdict">REFUSED</span>
+          <span class="code">EVIDENCE_SUPERSEDED</span>
+        </div>
+        <div class="sub" id="s4-s">The edit does not run.</div>
+      </div>
+
+      <!-- S5: the name -->
+      <div class="clip" id="s5" data-start="20.4" data-duration="6.1" data-track-index="5">
+        <div class="brand" id="s5-b">Countersign</div>
+        <div class="brand-line" id="s5-l">The local control plane for an AI coding agent.</div>
+        <div class="url" id="s5-u">github.com/subheeksh5599/countersign</div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      tl.fromTo("#s1-k", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.7 }, 0.2);
+      tl.fromTo("#s1-h", { opacity: 0, y: 34 }, { opacity: 1, y: 0, duration: 0.9 }, 0.5);
+      tl.fromTo("#s1-c", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.8 }, 1.2);
+
+      tl.fromTo("#s2-k", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.6 }, 5.5);
+      tl.fromTo("#s2-r1", { opacity: 0, x: -26 }, { opacity: 1, x: 0, duration: 0.7 }, 5.9);
+      tl.fromTo("#s2-r2", { opacity: 0, x: -26 }, { opacity: 1, x: 0, duration: 0.7 }, 6.6);
+      tl.fromTo("#s2-s", { opacity: 0 }, { opacity: 1, duration: 0.7 }, 7.6);
+
+      tl.fromTo("#s3-k", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.6 }, 10.5);
+      tl.fromTo("#s3-h", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.9 }, 10.9);
+      tl.fromTo("#s3-c", { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.8 }, 12.0);
+
+      tl.fromTo("#s4-stamp", { opacity: 0, scale: 0.96 }, { opacity: 1, scale: 1, duration: 0.55 }, 16.5);
+      tl.fromTo("#s4-s", { opacity: 0 }, { opacity: 1, duration: 0.6 }, 17.3);
+
+      tl.fromTo("#s5-b", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.8 }, 20.7);
+      tl.fromTo("#s5-l", { opacity: 0 }, { opacity: 1, duration: 0.7 }, 21.4);
+      tl.fromTo("#s5-u", { opacity: 0 }, { opacity: 1, duration: 0.7 }, 21.8);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
