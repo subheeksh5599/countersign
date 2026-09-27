@@ -107,29 +107,7 @@ export default function Page() {
               moved, the call does not run.
             </p>
 
-            <div className="reveal in mx-auto mt-12 max-w-3xl">
-              <div className="flex items-center gap-3 rounded-full border border-gridline bg-white py-2 pl-5 pr-2 shadow-[var(--shadow-ring)]">
-                <div className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                  <span className="font-mono text-[13px] font-medium text-ink">EVIDENCE_SUPERSEDED</span>
-                  <span className="truncate text-body text-slate">the evidence moved, the edit did not run</span>
-                </div>
-                <span className="hidden rounded-full bg-vellum px-2.5 py-1 font-mono text-[12px] text-ink lg:inline">
-                  exit 2
-                </span>
-                <a
-                  href={EVIDENCE}
-                  aria-label="Open the live evidence page"
-                  className="cta flex h-9 shrink-0 items-center gap-1.5 px-3.5 text-body font-medium"
-                >
-                  Open
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M5 12h13M13 6l6 6-6 6" />
-                  </svg>
-                </a>
-              </div>
-            </div>
-
-            <div className="reveal in mt-12 flex items-center justify-center gap-3 text-body">
+            <div className="reveal in mt-14 flex items-center justify-center gap-3 text-body">
               <a href={REPO} className="cta px-5 py-2.5 font-medium">
                 Read the source
               </a>
