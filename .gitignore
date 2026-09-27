@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 lens.html
 .countersign-runtime.log
+landing/AGENTS.md
+landing/CLAUDE.md
+.countersign-runtime.log
+.countersign-console.log
