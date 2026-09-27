@@ -338,10 +338,9 @@
     columns: (auto, 1fr),
     row-gutter: 0.42cm,
     column-gutter: 1cm,
-    [*Repository*], [github.com/subheeksh5599/countersign],
+    [*Repository*], [public, and linked in the submission form],
     [*Demo video*], [youtu.be/NQ43DN8eA8I],
     [*Product site*], [countersign-eight.vercel.app],
-    [*Published record*], [subheeksh5599.github.io/countersign],
   )
   #v(0.8cm)
   #lead[
