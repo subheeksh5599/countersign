@@ -64,7 +64,7 @@ def render(ws, events, tasks):
         "".join(f"<li class='mono'>{esc(s)} &middot; {esc(p)} &middot; "
                 f"{esc(str(d)[:16])}</li>" for s, p, d in sorted(items)) + "</ul></div>"
         for via, items in sorted(subs.items()))
-    return f"""<!doctype html><meta charset="utf-8"><title>Countersign - {esc(ws)}</title>
+    return f"""<!doctype html><meta charset="utf-8"><title>Countersign - {esc(os.path.basename(ws.rstrip('/')) or ws)}</title>
 <style>
  body{{background:#0d0f12;color:#e6e8eb;font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;margin:0;padding:32px}}
  h1{{font-size:18px;margin:0 0 4px}} h2{{font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:#8b93a1;margin:28px 0 8px}}
@@ -76,7 +76,7 @@ def render(ws, events, tasks):
  .code{{color:#ff7b72;font-weight:600}} .meta{{color:#8b93a1;margin:4px 0}} ul{{margin:4px 0 0 18px;padding:0}}
  .note{{color:#8b93a1;margin:8px 0 0;max-width:80ch}}
 </style>
-<h1>Countersign</h1><div class="meta">workspace {esc(ws)}</div>
+<h1>Countersign</h1><div class="meta">workspace <span title="{esc(ws)}">{esc(os.path.basename(ws.rstrip('/')) or ws)}</span></div>
 <p class="note">A static record of one run, rendered from the store that run left on disk.
 The operable console reads a live runtime instead: clone the repository, run
 <span class="mono">sh run.sh</span>, and open <span class="mono">http://127.0.0.1:4311/console</span>.</p>

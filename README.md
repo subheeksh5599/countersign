@@ -52,9 +52,13 @@ Nothing in this repository reports a credential or a service as reachable that i
 
 ## ▶ Demo
 
-[![▶ Watch the demo: 1:12, a real screen capture of the running console](docs/media/countersign-demo-poster.webp)](https://youtu.be/NQ43DN8eA8I)
+[![▶ Watch the demo: a real screen capture of the running console](docs/media/countersign-demo-poster.webp)](https://youtu.be/NQ43DN8eA8I)
 
-**[▶ Watch the demo (1:12)](https://youtu.be/NQ43DN8eA8I)** &nbsp;·&nbsp; **[ Verify the record in your browser ↗ ](https://countersign-eight.vercel.app/record)** &nbsp;·&nbsp; **[ Local copy ↗ ](docs/media/countersign-demo.mp4)** &nbsp;·&nbsp; **[ The intro on its own ↗ ](docs/media/countersign-intro.mp4)** &nbsp;·&nbsp; **[ Posted on X ↗ ](https://x.com/KomariS18774/status/2104154580519178708)** &nbsp;·&nbsp; **[ What's real vs pending ↗ ](#whats-real-vs-pending--the-honesty-table)**
+**[▶ Watch the demo (2:05) ↗](docs/media/countersign-demo.mp4)** &nbsp;·&nbsp; **[ Also on YouTube ↗ ](https://youtu.be/NQ43DN8eA8I)** &nbsp;·&nbsp; **[ Verify the record in your browser ↗ ](https://countersign-eight.vercel.app/record)** &nbsp;·&nbsp; **[ The intro on its own ↗ ](docs/media/countersign-intro.mp4)** &nbsp;·&nbsp; **[ Posted on X ↗ ](https://x.com/KomariS18774/status/2104154580519178708)** &nbsp;·&nbsp; **[ What's real vs pending ↗ ](#whats-real-vs-pending--the-honesty-table)**
+
+The cut is 2:05 total, with 1:35 of it the product on screen, which clears the event's floor of
+90 seconds in action inside a 3-minute cap. Of that, the refusal itself is on screen with the
+held digest beside the digest on disk.
 
 _One take, website only, no terminal and no editor: every panel is filled by a real run of the same gate the test suite drives._ It opens on a 26.5 s composition that states the failure, then shows the console refusing a real agent turn, the record it leaves behind, and the receipt replay.
 
@@ -498,9 +502,10 @@ For a team, the honest shape follows from what the gate is: it must run where th
 | [`docs/SCENE_REVISION_MOVED.md`](docs/SCENE_REVISION_MOVED.md) | bytes identical, revision moved, refused |
 | [`docs/evidence-store/`](docs/evidence-store/) | six recorded stores — a live session, a multi-developer run, the revision scene, the scripted scene, a scale check, and the bundle CI replays |
 | [`docs/CI.md`](docs/CI.md) | what a machine that never ran the gate can still check |
+| [`bob_sessions/`](bob_sessions/README.md) | the Bob evidence: the headless run that was refused four times, its captured stdout, and the Task Summary Bob printed |
 | [`demo/NARRATION.md`](demo/NARRATION.md) | the demo: what was kept, what was cut and why, where every line lands |
 | [`demo/CLICKS.md`](demo/CLICKS.md) | the click list for reproducing the recording |
-| [Watch the demo](https://youtu.be/NQ43DN8eA8I) | 1:12, narrated, website only. Also [posted on X](https://x.com/KomariS18774/status/2104154580519178708) |
+| [Watch the demo](https://youtu.be/NQ43DN8eA8I) | 2:05, narrated, website only. Also [posted on X](https://x.com/KomariS18774/status/2104154580519178708) |
 
 ## Tests
 

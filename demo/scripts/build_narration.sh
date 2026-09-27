@@ -5,6 +5,10 @@
 #
 # Voice: en-US-AndrewMultilingualNeural. The delivered speech is measured (median F0) in
 # verify_cut.sh; a value in the 100-130 Hz band is the adult male range.
+#
+# The demo section runs longer than the first cut. The submission rules ask for at least 90
+# seconds of the solution on screen, and the first cut carried 44s of it. The added lines
+# cover the self-test run and the published record page, both real product surfaces.
 set -e
 OUT="${1:-/tmp/csign_tts}"
 VOICE="en-US-AndrewMultilingualNeural"
@@ -28,10 +32,17 @@ say i4 "Different, and the edit does not run."
 say i5 "Countersign. The local control plane for an AI coding agent."
 
 # --- the recording -----------------------------------------------------------
-say d1 "Countersign refuses an edit when the facts behind it are no longer true."
-say d2 "The console drives a real turn against a demo repository, with a second process moving the file."
-say d3 "The agent reads, records that digest as evidence, then asks to change the file."
-say d4 "Exit two. The evidence the task held is older than the file on disk, so the edit never runs."
-say d5 "Each session keeps its own manifest: files, refusals, receipts."
-say d6 "Every call is kept, classified, with its verdict."
-say d7 "Replays re-derive both verdicts. None fails."
+say d1 "Countersign sits in front of every state-changing tool call an agent makes."
+say d2 "It holds one rule. No write may use repository evidence whose identity is no longer current."
+say d3 "The verdict is a hash comparison, and no model touches it."
+say d4 "Here the console runs one real agent turn, against a real repository."
+say d5 "The agent reads the file, and that read is recorded as evidence."
+say d6 "A second process moves the file while the agent is still working."
+say d7 "The write comes back refused, exit code two, with the digest the task held beside the digest on disk."
+say d8 "The console can also run its acceptance check on demand, and show every step passing."
+say d9 "Nothing on these pages is a stored claim. Every line comes from the run in front of you."
+say d10 "Evidence: each session's manifest, with its refusals and admissions counted."
+say d11 "Interceptor: every call the hook saw, classified, with its verdict."
+say d12 "Receipts: the store replays, both verdicts re-derive, and none fails."
+say d13 "The published record is checkable too. The site recomputes these receipts in your browser, and prints the chain head it computes beside the one the command line prints."
+say d14 "Countersign. Local first, and no model in the verdict."
